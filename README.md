@@ -49,7 +49,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 19 | Configuration (`config.yaml` + env) | ✅ Done |
 | 20 | Security (secret encryption) | ✅ Done |
 | 2 | Resume Parser | ✅ Done |
-| 3 | Company Discovery | ⏳ Planned |
+| 3 | Company Discovery | ✅ Done |
 | 4 | Career Page Detection | ⏳ Planned |
 | 5 | People Discovery | ⏳ Planned |
 | 6 | Email Pattern Generator | ⏳ Planned |

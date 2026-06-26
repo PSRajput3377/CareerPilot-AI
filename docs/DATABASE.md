@@ -46,10 +46,28 @@ user_profiles
 
 ## Planned tables (future modules)
 
+### `companies` (Module 3)
+
+```
+companies
+├─ id                    PK
+├─ name                  not null, indexed
+├─ website / domain (indexed) / career_page / linkedin_url
+├─ industry (indexed) / location / remote_friendly / employee_count
+├─ tech_stack            comma-separated text (list in API)
+├─ hiring_platform       ATS slug (refined by Module 4)
+├─ funding_stage         enum (bootstrapped … public | unknown)
+├─ hiring_status         enum (hiring | not_hiring | unknown)
+├─ source                provenance (discovery provider id)
+└─ created_at / updated_at
+   unique (name, website)
+```
+
+## Planned tables (future modules)
+
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 3 Company Discovery | `companies` |
-| 4 Career Page Detection | `company_ats` |
+| 4 Career Page Detection | (extends `companies.hiring_platform`) |
 | 5 People Discovery | `people` |
 | 7 Email Verification | `email_verifications` |
 | 10 Templates | `email_templates` |

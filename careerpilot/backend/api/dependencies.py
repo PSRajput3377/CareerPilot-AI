@@ -12,7 +12,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from careerpilot.backend.database.session import get_db
+from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
+from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
 
@@ -31,3 +33,10 @@ def get_resume_service(session: DbSession) -> ResumeService:
 
 
 ResumeServiceDep = Annotated[ResumeService, Depends(get_resume_service)]
+
+
+def get_company_service(session: DbSession) -> CompanyService:
+    return CompanyService(CompanyRepository(session))
+
+
+CompanyServiceDep = Annotated[CompanyService, Depends(get_company_service)]

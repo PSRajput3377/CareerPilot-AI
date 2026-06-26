@@ -17,8 +17,11 @@ from rich.table import Table
 
 from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
+from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
+from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
+from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
 
@@ -144,6 +147,46 @@ def parse_resume(
         console.print(f"[green]Merged into profile id={profile_id}[/green]")
 
 
+@app.command("discover-company")
+def discover_company(
+    name: Annotated[str, typer.Argument(help="Company name or keyword")],
+    industry: Annotated[str | None, typer.Option(help="Filter by industry")] = None,
+    location: Annotated[str | None, typer.Option(help="Filter by location")] = None,
+    remote: Annotated[bool, typer.Option(help="Prefer remote-friendly")] = False,
+    limit: Annotated[int, typer.Option(help="Max results")] = 20,
+) -> None:
+    """Discover companies and persist them (Module 3)."""
+    query = CompanySearchQuery(
+        name=name,
+        industry=industry,
+        location=location,
+        remote=remote or None,
+        limit=limit,
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = CompanyService(CompanyRepository(session))
+            companies = await service.discover(query)
+            # Detach the data we need before the session closes.
+            return [
+                (c.id, c.name, c.industry, c.career_page, c.hiring_platform, c.source)
+                for c in companies
+            ]
+
+    rows = _run(_do())
+    table = Table(title=f"Discovered companies for '{name}'")
+    table.add_column("ID", justify="right")
+    table.add_column("Name")
+    table.add_column("Industry")
+    table.add_column("Career Page")
+    table.add_column("ATS")
+    table.add_column("Source")
+    for cid, cname, ind, career, ats, source in rows:
+        table.add_row(str(cid), cname, ind or "-", career or "-", ats or "-", source or "-")
+    console.print(table)
+
+
 @profile_app.command("show")
 def profile_show(profile_id: int) -> None:
     """Show a single profile as JSON."""
@@ -164,7 +207,6 @@ def profile_show(profile_id: int) -> None:
 # --------------------------------------------------------------------------- #
 
 _UPCOMING = {
-    "discover-company": "Module 3 — Company Discovery",
     "discover-people": "Module 5 — People Discovery",
     "verify-emails": "Module 7 — Email Verification",
     "generate-cover-letter": "Module 9 — Cover Letter Generator",

@@ -6,10 +6,11 @@ one place so ``main.py`` stays stable as the platform grows.
 
 from fastapi import APIRouter
 
-from careerpilot.backend.api.v1 import profiles, resumes
+from careerpilot.backend.api.v1 import companies, profiles, resumes
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(profiles.router)
 api_router.include_router(resumes.router)
+api_router.include_router(companies.router)
 
 __all__ = ["api_router"]
