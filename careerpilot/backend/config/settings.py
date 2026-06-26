@@ -50,6 +50,29 @@ class LoggingConfig(BaseModel):
     directory: str = "careerpilot/backend/logs"
 
 
+class EmailPatternConfig(BaseModel):
+    """Templates for guessing business emails (Module 6).
+
+    Each template uses ``{first} {last} {f} {l}`` placeholders and is rendered
+    against the email-safe local parts of a person's name. Order is significance:
+    the first usable template is the primary guess.
+    """
+
+    max_candidates: int = 6
+    templates: list[str] = Field(
+        default_factory=lambda: [
+            "{first}.{last}",
+            "{f}{last}",
+            "{first}",
+            "{first}{last}",
+            "{f}.{last}",
+            "{last}.{first}",
+            "{last}",
+            "{first}_{last}",
+        ]
+    )
+
+
 class LLMConfig(BaseModel):
     provider: str = "openai"
     model: str = "gpt-4o-mini"
@@ -106,6 +129,7 @@ class Settings(BaseSettings):
     retry: RetryConfig = Field(default_factory=RetryConfig)
     scheduling: SchedulingConfig = Field(default_factory=SchedulingConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    email_patterns: EmailPatternConfig = Field(default_factory=EmailPatternConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
 
     @property
@@ -129,7 +153,14 @@ def _build_settings(config_path: Path | None = None) -> Settings:
     if "app" in yaml_data:
         overrides["app_name"] = yaml_data["app"].get("name", "CareerPilot AI")
         overrides["app_version"] = yaml_data["app"].get("version", "0.1.0")
-    for key in ("rate_limits", "retry", "scheduling", "logging", "llm"):
+    for key in (
+        "rate_limits",
+        "retry",
+        "scheduling",
+        "logging",
+        "email_patterns",
+        "llm",
+    ):
         if key in yaml_data and yaml_data[key] is not None:
             overrides[key] = yaml_data[key]
 

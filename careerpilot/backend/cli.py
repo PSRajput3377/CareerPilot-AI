@@ -27,6 +27,10 @@ from careerpilot.backend.schemas.person import PeopleSearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
+from careerpilot.backend.services.email_pattern import (
+    EmailPatternGenerator,
+    EmailPatternService,
+)
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -257,6 +261,56 @@ def discover_people(
         )
     console.print(table)
     console.print(f"[green]People saved:[/green] {saved}")
+
+
+@app.command("guess-email")
+def guess_email(
+    full_name: Annotated[str, typer.Argument(help="Person's full name")],
+    domain: Annotated[str, typer.Argument(help="Company domain, e.g. stripe.com")],
+) -> None:
+    """Generate ranked email guesses for a name + domain (Module 6).
+
+    Stateless preview — does not touch the database. Guesses are unverified.
+    """
+    result = EmailPatternGenerator().generate(full_name, domain)
+    table = Table(title=f"Email guesses for {full_name} @ {domain}")
+    table.add_column("#", justify="right")
+    table.add_column("Email")
+    table.add_column("Pattern")
+    table.add_column("Confidence", justify="right")
+    for i, c in enumerate(result.candidates, start=1):
+        table.add_row(str(i), c.email, c.pattern, f"{c.confidence:.0%}")
+    console.print(table)
+    if not result.candidates:
+        console.print("[yellow]No candidates — need a domain and a first name.[/yellow]")
+
+
+@app.command("guess-company-emails")
+def guess_company_emails(
+    company_id: Annotated[int, typer.Argument(help="Company id to fill emails for")],
+    overwrite: Annotated[
+        bool, typer.Option(help="Replace existing guess emails")
+    ] = False,
+) -> None:
+    """Fill missing pattern emails for every person at a company (Module 6)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = EmailPatternService(
+                CompanyRepository(session), PersonRepository(session)
+            )
+            results = await service.guess_for_company(company_id, overwrite=overwrite)
+            return [(r.person_id, r.filled, r.email) for r in results]
+
+    rows = _run(_do())
+    table = Table(title=f"Pattern emails for company id={company_id}")
+    table.add_column("Person ID", justify="right")
+    table.add_column("Filled")
+    table.add_column("Email")
+    for pid, filled, email in rows:
+        table.add_row(str(pid), "yes" if filled else "no", email or "-")
+    console.print(table)
+    console.print(f"[green]Filled:[/green] {sum(1 for _, f, _ in rows if f)}/{len(rows)}")
 
 
 @profile_app.command("show")

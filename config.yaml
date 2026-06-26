@@ -31,6 +31,20 @@ logging:
   level: "INFO"
   directory: "careerpilot/backend/logs"
 
+# Email pattern guessing (Module 6). Ordered most→least common; the first
+# template becomes the primary guess. Placeholders: {first} {last} {f} {l}.
+email_patterns:
+  max_candidates: 6
+  templates:
+    - "{first}.{last}"
+    - "{f}{last}"
+    - "{first}"
+    - "{first}{last}"
+    - "{f}.{last}"
+    - "{last}.{first}"
+    - "{last}"
+    - "{first}_{last}"
+
 # LLM behaviour (provider key comes from env).
 llm:
   provider: "openai"

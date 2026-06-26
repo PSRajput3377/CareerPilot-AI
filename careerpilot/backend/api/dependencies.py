@@ -18,6 +18,7 @@ from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.services.career_page import CareerPageService
 from careerpilot.backend.services.company import CompanyService
+from careerpilot.backend.services.email_pattern import EmailPatternService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -58,3 +59,12 @@ def get_people_service(session: DbSession) -> PeopleService:
 
 
 PeopleServiceDep = Annotated[PeopleService, Depends(get_people_service)]
+
+
+def get_email_pattern_service(session: DbSession) -> EmailPatternService:
+    return EmailPatternService(CompanyRepository(session), PersonRepository(session))
+
+
+EmailPatternServiceDep = Annotated[
+    EmailPatternService, Depends(get_email_pattern_service)
+]

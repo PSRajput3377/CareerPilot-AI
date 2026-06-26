@@ -6,7 +6,7 @@ Settings resolve in this precedence order (later wins):
 
 1. Field defaults in `config/settings.py`.
 2. `config.yaml` — non-secret, environment-agnostic structure (rate limits,
-   retry, scheduling, logging, LLM behaviour).
+   retry, scheduling, logging, email-pattern templates, LLM behaviour).
 3. Environment variables / `.env`, prefixed `CAREERPILOT_` — secrets and
    per-environment overrides.
 

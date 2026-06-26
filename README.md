@@ -52,7 +52,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 3 | Company Discovery | ✅ Done |
 | 4 | Career Page Detection | ✅ Done |
 | 5 | People Discovery | ✅ Done |
-| 6 | Email Pattern Generator | ⏳ Planned |
+| 6 | Email Pattern Generator | ✅ Done |
 | 7 | Email Verification | ⏳ Planned |
 | 8 | Job Matching AI | ⏳ Planned |
 | 9 | Cover Letter Generator | ⏳ Planned |
@@ -372,6 +372,53 @@ any other company gets a synthesized roster so you can exercise the full flow.
 
 ---
 
+### Step 8d — Guess business emails (when none was found)
+
+When a person was discovered without a public email, CareerPilot can guess one
+from the company domain using common corporate conventions
+(`first.last@`, `flast@`, …). This is the *"no public email → generate common
+patterns"* branch of the pipeline.
+
+**Preview guesses for any name + domain (stateless, nothing saved):**
+
+```bash
+careerpilot guess-email "Jane Doe" stripe.com
+```
+
+This prints ranked candidates with the pattern that produced each and a
+confidence score (rank-based, most-common pattern first):
+
+```
+1  jane.doe@stripe.com   {first}.{last}   100%
+2  jdoe@stripe.com       {f}{last}         88%
+3  jane@stripe.com       {first}           75%
+...
+```
+
+**Fill missing emails for everyone discovered at a company:**
+
+```bash
+careerpilot guess-company-emails 1            # 1 = company id
+careerpilot guess-company-emails 1 --overwrite  # also re-roll existing guesses
+```
+
+The best candidate is written onto each person who lacks an email, marked
+`email_source = pattern` and **left unverified**.
+
+> **Why unverified?** Guessed addresses are not confirmed deliverable. Per the
+> outreach contract, a known **public** email is never overwritten by a guess,
+> and nothing is auto-sent to an unverified address. Email verification is the
+> next module (Module 7). Pattern templates are configurable under
+> `email_patterns` in `config.yaml`.
+
+**Via the API:**
+
+- `GET /api/v1/email-patterns/preview?full_name=...&domain=...` — stateless preview
+- `POST /api/v1/people/{person_id}/guess-email` — fill one person (`?overwrite=true` to replace a guess)
+- `POST /api/v1/companies/{id}/people/guess-emails` — fill everyone at a company
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -395,6 +442,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `GET` | `/api/v1/companies/search` | Search saved companies |
 | `POST` | `/api/v1/companies/{id}/people/discover` | Discover people at a company |
 | `GET` | `/api/v1/companies/{id}/people` | List saved people for a company |
+| `GET` | `/api/v1/email-patterns/preview` | Preview guessed emails (name + domain) |
+| `POST` | `/api/v1/companies/{id}/people/guess-emails` | Fill missing emails for a company |
 
 **Example — create a profile via curl:**
 
