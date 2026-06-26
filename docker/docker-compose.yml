@@ -1,0 +1,39 @@
+# Local production-like stack: API + PostgreSQL + Redis (for Celery workers).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: careerpilot
+      POSTGRES_PASSWORD: careerpilot
+      POSTGRES_DB: careerpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careerpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      CAREERPILOT_ENV: production
+      CAREERPILOT_DATABASE_URL: postgresql+asyncpg://careerpilot:careerpilot@db:5432/careerpilot
+      CAREERPILOT_ENCRYPTION_KEY: ${CAREERPILOT_ENCRYPTION_KEY}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

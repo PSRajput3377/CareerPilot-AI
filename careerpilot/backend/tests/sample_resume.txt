@@ -1,0 +1,25 @@
+Jane Q. Engineer
+jane.engineer@example.com | +1 (415) 555-0199
+github.com/janeqeng | linkedin.com/in/janeqeng
+
+EXPERIENCE
+Senior Software Engineer — Acme Cloud
+- Built distributed services in Go and Python on Kubernetes and AWS.
+- Led migration to PostgreSQL and Kafka.
+Software Engineering Intern, Startup Labs
+- Prototyped a React and FastAPI dashboard.
+
+EDUCATION
+Massachusetts Institute of Technology — B.S. Computer Science
+
+PROJECTS
+CareerPilot — github.com/janeqeng/careerpilot
+- An automation platform built with FastAPI, PostgreSQL, and Redis.
+
+SKILLS
+Python, Go, JavaScript, React, FastAPI, Django, PostgreSQL, Redis, Docker,
+Kubernetes, AWS, Kafka, Terraform
+
+ACHIEVEMENTS
+- Winner, MIT Hackathon 2023
+- Open-source contributor to Kubernetes

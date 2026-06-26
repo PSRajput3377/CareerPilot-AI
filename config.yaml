@@ -1,0 +1,39 @@
+# CareerPilot AI — application configuration (Module 19)
+#
+# Non-secret, environment-agnostic defaults live here. Secrets (passwords, API
+# keys, DB credentials) come from environment variables / .env — never here.
+# Any value below can be overridden by an env var prefixed with CAREERPILOT_.
+
+app:
+  name: "CareerPilot AI"
+  version: "0.1.0"
+
+# Outreach sending guardrails (consumed from Module 14/15).
+rate_limits:
+  emails_per_hour: 30
+  emails_per_day: 100
+  min_seconds_between_sends: 45
+
+retry:
+  max_attempts: 3
+  backoff_base_seconds: 2
+  backoff_max_seconds: 60
+
+scheduling:
+  avoid_weekends: true
+  send_window_start: "09:00"
+  send_window_end: "18:00"
+  timezone: "UTC"
+  followup_offsets_days: [3, 7, 14]   # initial -> 1st -> 2nd -> 3rd follow-up
+
+# Logging / CSV artifacts (Module 18).
+logging:
+  level: "INFO"
+  directory: "careerpilot/backend/logs"
+
+# LLM behaviour (provider key comes from env).
+llm:
+  provider: "openai"
+  model: "gpt-4o-mini"
+  temperature: 0.7
+  max_tokens: 1200
