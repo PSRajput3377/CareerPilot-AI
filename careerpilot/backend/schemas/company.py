@@ -41,6 +41,7 @@ class CompanyBase(BaseModel):
     employee_count: int | None = Field(default=None, ge=0)
     tech_stack: list[str] = Field(default_factory=list)
     hiring_platform: str | None = Field(default=None, max_length=64)
+    ats_platform: str | None = Field(default=None, max_length=32)
     funding_stage: FundingStage = FundingStage.UNKNOWN
     hiring_status: HiringStatus = HiringStatus.UNKNOWN
     source: str | None = Field(default=None, max_length=64)

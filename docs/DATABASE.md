@@ -65,9 +65,27 @@ companies
 
 ## Planned tables (future modules)
 
+### `job_listings` (Module 4)
+
+```
+job_listings
+├─ id                 PK
+├─ company_id         FK → companies (cascade)
+├─ external_id        ATS-assigned id (for idempotent upsert)
+├─ title              not null
+├─ location / department / employment_type / url / description / remote
+└─ created_at / updated_at
+   unique (company_id, external_id)
+```
+
+Module 4 also adds `companies.ats_platform` (normalized enum: greenhouse, lever,
+ashby, workday, smartrecruiters, bamboohr, jobvite, oracle, sap_successfactors,
+custom, unknown).
+
+## Planned tables (future modules)
+
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 4 Career Page Detection | (extends `companies.hiring_platform`) |
 | 5 People Discovery | `people` |
 | 7 Email Verification | `email_verifications` |
 | 10 Templates | `email_templates` |

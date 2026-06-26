@@ -50,7 +50,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 20 | Security (secret encryption) | ✅ Done |
 | 2 | Resume Parser | ✅ Done |
 | 3 | Company Discovery | ✅ Done |
-| 4 | Career Page Detection | ⏳ Planned |
+| 4 | Career Page Detection | ✅ Done |
 | 5 | People Discovery | ⏳ Planned |
 | 6 | Email Pattern Generator | ⏳ Planned |
 | 7 | Email Verification | ⏳ Planned |
@@ -68,6 +68,417 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 21 | CLI | 🟦 Spine + profile commands |
 | 22 | Web Dashboard | ⏳ Planned |
 | 23 | Future integrations | 🧩 Designed for |
+
+---
+
+## How to Use — Step by Step
+
+This guide walks you through setting up CareerPilot AI from scratch and using
+every feature that is available today: **user profiles**, **resume parsing**, and
+**company discovery**. Follow the steps in order the first time; later you can
+jump straight to the command you need.
+
+### What you need before starting
+
+| Requirement | Details |
+| ----------- | ------- |
+| **Python** | 3.12 or newer (tested on 3.14) |
+| **Git** | To clone the repository |
+| **Terminal** | macOS Terminal, Linux shell, or Windows WSL |
+| **Optional** | Docker Desktop — only if you want the PostgreSQL stack |
+
+You do **not** need an OpenAI key, SMTP credentials, or any paid API to try the
+current modules. Company discovery uses a built-in offline dataset; resume parsing
+uses a heuristic parser (no LLM required).
+
+---
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/PSRajput3377/CareerPilot-AI.git
+cd CareerPilot-AI
+```
+
+> **macOS tip:** Make sure you open the folder named `CareerPilot-AI` (or
+> `automate email` if that is your local copy name) — **not** a similarly named
+> folder with a trailing space. If Cursor/VS Code shows an almost-empty folder
+> with only `.claude/`, you opened the wrong directory.
+
+---
+
+### Step 2 — Create a Python virtual environment
+
+A virtual environment keeps CareerPilot's dependencies isolated from the rest of
+your system.
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it:
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows (Command Prompt)
+.venv\Scripts\activate.bat
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+```
+
+Your prompt should now show `(.venv)`. Every command below assumes this
+environment is active.
+
+---
+
+### Step 3 — Install CareerPilot
+
+```bash
+pip install -e ".[dev]"
+```
+
+This installs the `careerpilot` CLI, the FastAPI server, and dev tools (pytest,
+ruff, mypy). Verify the install:
+
+```bash
+careerpilot --help
+```
+
+You should see commands like `init-db`, `profile`, `parse-resume`, and
+`discover-company`.
+
+---
+
+### Step 4 — Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` in any text editor. For local development the defaults work out of
+the box, but you should set an encryption key so secrets can be stored properly:
+
+```bash
+careerpilot generate-encryption-key
+```
+
+Copy the printed key into `.env`:
+
+```env
+CAREERPILOT_ENCRYPTION_KEY=paste-the-key-here
+```
+
+**Key settings in `.env`:**
+
+| Variable | Default | What it does |
+| -------- | ------- | ------------ |
+| `CAREERPILOT_ENV` | `development` | Runtime mode |
+| `CAREERPILOT_DATABASE_URL` | SQLite file | Where data is stored |
+| `CAREERPILOT_ENCRYPTION_KEY` | *(empty)* | Encrypts stored secrets |
+| `CAREERPILOT_OPENAI_API_KEY` | *(empty)* | Only needed for future LLM features |
+
+Non-secret behaviour (rate limits, scheduling windows, log paths) lives in
+`config.yaml` and can be edited without touching `.env`.
+
+---
+
+### Step 5 — Initialize the database
+
+```bash
+careerpilot init-db
+```
+
+Expected output:
+
+```
+Database tables created.
+```
+
+This creates a local SQLite file (`careerpilot.db` by default) with tables for
+profiles, companies, skills, experience, and education. In production you would
+use PostgreSQL and Alembic migrations instead — see
+[Deployment](docs/DEPLOYMENT.md).
+
+---
+
+### Step 6 — Create your job-search profile
+
+A **profile** is your CareerPilot identity: name, email, target role, skills,
+and (later) parsed resume data.
+
+**CLI:**
+
+```bash
+careerpilot profile create \
+  --name "Jane Engineer" \
+  --email "jane@example.com" \
+  --role "Backend Engineer" \
+  --location "San Francisco, CA" \
+  --skills "Python,Go,PostgreSQL,FastAPI"
+```
+
+Expected output:
+
+```
+Created profile id=1 (jane@example.com)
+```
+
+**List all profiles:**
+
+```bash
+careerpilot profile list
+```
+
+**View one profile as JSON:**
+
+```bash
+careerpilot profile show 1
+```
+
+Save the `id` — you will need it when parsing a resume into the profile.
+
+---
+
+### Step 7 — Parse your resume
+
+CareerPilot extracts structured data (skills, experience, education, links) from
+a `.pdf` or `.txt` resume.
+
+**Option A — Parse only (preview, no save):**
+
+```bash
+careerpilot parse-resume careerpilot/backend/tests/sample_resume.txt
+```
+
+This prints JSON with the extracted fields. Use your own resume file path instead
+of the sample.
+
+**Option B — Parse and merge into your profile:**
+
+```bash
+careerpilot parse-resume /path/to/your/resume.pdf --profile-id 1
+```
+
+This parses the file **and** merges skills, experience, education, and links
+into profile `1`. Run `careerpilot profile show 1` afterward to see the updated
+profile.
+
+**Via the API** (start the server first — see Step 9):
+
+- `POST /api/v1/resumes/parse` — upload a file, get JSON back
+- `POST /api/v1/resumes/parse-into-profile?profile_id=1` — upload and merge
+
+---
+
+### Step 8 — Discover companies
+
+Search for companies to target in your job search. Results are saved to the
+database so you can search them later.
+
+```bash
+careerpilot discover-company "Stripe"
+```
+
+Filter further:
+
+```bash
+careerpilot discover-company "Datadog" --industry "Observability" --remote --limit 10
+```
+
+The command prints a table with company ID, name, industry, career page URL, ATS
+platform (Greenhouse, Ashby, etc.), and data source.
+
+**Curated companies in the offline dataset:** Stripe, Datadog, Vercel, Notion,
+Anthropic. Searching for a name not in the list still returns a synthesized
+record (marked `stub:synthesized`) so you can test the full flow without
+external APIs.
+
+**Search companies already saved:**
+
+Use the API after starting the server:
+
+```bash
+curl "http://localhost:8000/api/v1/companies/search?name=Stripe"
+```
+
+---
+
+### Step 8b — Detect a company's career page (ATS)
+
+Once a company is saved, detect which Applicant Tracking System it uses
+(Greenhouse, Lever, Ashby, Workday, SmartRecruiters, BambooHR, Jobvite, Oracle,
+SAP SuccessFactors, or a custom page) and extract any public job listings.
+
+```bash
+careerpilot detect-career-page 1     # 1 = the company id from Step 8
+```
+
+Expected output:
+
+```
+Detected: greenhouse (confidence 95%, detector pattern)
+Career page: https://stripe.com/jobs
+Listings saved: 0
+```
+
+Detection is offline and deterministic — it recognizes the ATS from the career
+page URL and the discovered hiring-platform slug. The detected platform is saved
+on the company (`ats_platform`).
+
+**Via the API:**
+
+- `POST /api/v1/companies/{id}/detect-career-page` — detect + persist
+- `GET /api/v1/companies/{id}/jobs` — list extracted job listings
+
+---
+
+### Step 9 — Run the REST API (optional)
+
+The API exposes the same features as the CLI, plus an interactive Swagger UI.
+
+```bash
+uvicorn careerpilot.backend.main:app --reload
+```
+
+Open **http://localhost:8000/docs** in your browser.
+
+**Common endpoints:**
+
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| `POST` | `/api/v1/profiles` | Create a profile |
+| `GET` | `/api/v1/profiles` | List profiles |
+| `GET` | `/api/v1/profiles/{id}` | Get one profile |
+| `POST` | `/api/v1/resumes/parse` | Upload resume → JSON |
+| `POST` | `/api/v1/resumes/parse-into-profile` | Upload + merge into profile |
+| `POST` | `/api/v1/companies/discover` | Discover and save companies |
+| `GET` | `/api/v1/companies/search` | Search saved companies |
+
+**Example — create a profile via curl:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/profiles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Engineer",
+    "email": "jane@example.com",
+    "preferred_role": "Backend Engineer",
+    "skills": [{"name": "Python"}, {"name": "Go"}]
+  }'
+```
+
+**Example — discover companies via curl:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/companies/discover \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Vercel", "limit": 5}'
+```
+
+---
+
+### Step 10 — Run with Docker (optional)
+
+For a production-like stack (API + PostgreSQL + Redis):
+
+```bash
+# Generate an encryption key and export it for Docker
+export CAREERPILOT_ENCRYPTION_KEY=$(careerpilot generate-encryption-key)
+
+# Build and start all services
+docker compose -f docker/docker-compose.yml up --build
+```
+
+API: **http://localhost:8000/docs**
+
+Stop with `Ctrl+C`, then `docker compose -f docker/docker-compose.yml down`.
+
+---
+
+### Step 11 — Run tests (verify your setup)
+
+```bash
+pytest
+```
+
+All tests should pass. They use an isolated in-memory database, so they will not
+affect your local `careerpilot.db`.
+
+---
+
+### Recommended first-time workflow (cheat sheet)
+
+Run these in order after setup:
+
+```bash
+# 1. Setup (once)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env
+careerpilot generate-encryption-key   # paste into .env
+careerpilot init-db
+
+# 2. Create profile
+careerpilot profile create \
+  --name "Your Name" \
+  --email "you@example.com" \
+  --role "Software Engineer" \
+  --skills "Python,SQL,Docker"
+
+# 3. Parse resume into profile (replace path and id)
+careerpilot parse-resume /path/to/resume.pdf --profile-id 1
+
+# 4. Discover target companies
+careerpilot discover-company "Stripe"
+careerpilot discover-company "Anthropic" --remote
+
+# 5. Review results
+careerpilot profile show 1
+careerpilot profile list
+```
+
+---
+
+### Git hooks (optional)
+
+After cloning, install the commit-msg hook once to keep AI co-author trailers out
+of git history:
+
+```bash
+./scripts/install-git-hooks.sh
+```
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| `careerpilot: command not found` | Activate `.venv` and re-run `pip install -e ".[dev]"` |
+| `Database tables created` never appears | Check Python version: `python3 --version` (need 3.12+) |
+| Empty folder in Cursor/VS Code | Open the correct project folder (no trailing space in the name) |
+| `CAREERPILOT_ENCRYPTION_KEY` errors in production | Run `careerpilot generate-encryption-key` and set it in `.env` |
+| Resume parse returns little data | Try a `.txt` resume first; PDFs with scanned images need OCR (not yet supported) |
+| `discover-people`, `send-email`, etc. say "not implemented" | Those modules are planned — see the Status table below |
+
+---
+
+### What is not available yet
+
+These CLI commands exist as stubs but will show a "coming soon" message:
+
+- `discover-people` — find recruiters and employees
+- `verify-emails` — check email deliverability
+- `generate-cover-letter` — AI cover letters
+- `send-email` — send outreach via Gmail/SMTP
+- `follow-up` — automated follow-up drafts
+- `dashboard` — analytics
+
+The full outreach pipeline (draft → review → send → track) is being built module
+by module. Profiles, resume parsing, and company discovery are the starting point.
 
 ---
 
@@ -99,8 +510,10 @@ uvicorn careerpilot.backend.main:app --reload
 
 > Default DB is zero-config SQLite. Point `CAREERPILOT_DATABASE_URL` at
 > PostgreSQL for production.
+>
+> For the full walkthrough with examples, see
+> [How to Use — Step by Step](#how-to-use--step-by-step) above.
 
----
 
 ## Testing
 

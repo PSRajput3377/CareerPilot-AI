@@ -18,9 +18,11 @@ from rich.table import Table
 from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
 from careerpilot.backend.repositories.company import CompanyRepository
+from careerpilot.backend.repositories.job_listing import JobListingRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
+from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -185,6 +187,30 @@ def discover_company(
     for cid, cname, ind, career, ats, source in rows:
         table.add_row(str(cid), cname, ind or "-", career or "-", ats or "-", source or "-")
     console.print(table)
+
+
+@app.command("detect-career-page")
+def detect_career_page(
+    company_id: Annotated[int, typer.Argument(help="Company id to inspect")],
+) -> None:
+    """Detect a company's ATS platform and extract job listings (Module 4)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = CareerPageService(
+                CompanyRepository(session), JobListingRepository(session)
+            )
+            result = await service.detect_for_company(company_id)
+            return (
+                detection_summary(result.detection),
+                result.detection.career_page,
+                result.listings_saved,
+            )
+
+    summary, career_page, saved = _run(_do())
+    console.print(f"[green]Detected:[/green] {summary}")
+    console.print(f"Career page: {career_page or '-'}")
+    console.print(f"Listings saved: {saved}")
 
 
 @profile_app.command("show")

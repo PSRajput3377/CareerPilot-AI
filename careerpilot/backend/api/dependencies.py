@@ -13,7 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from careerpilot.backend.database.session import get_db
 from careerpilot.backend.repositories.company import CompanyRepository
+from careerpilot.backend.repositories.job_listing import JobListingRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
+from careerpilot.backend.services.career_page import CareerPageService
 from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -40,3 +42,10 @@ def get_company_service(session: DbSession) -> CompanyService:
 
 
 CompanyServiceDep = Annotated[CompanyService, Depends(get_company_service)]
+
+
+def get_career_page_service(session: DbSession) -> CareerPageService:
+    return CareerPageService(CompanyRepository(session), JobListingRepository(session))
+
+
+CareerPageServiceDep = Annotated[CareerPageService, Depends(get_career_page_service)]

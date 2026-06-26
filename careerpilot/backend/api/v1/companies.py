@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, status
 
-from careerpilot.backend.api.dependencies import CompanyServiceDep
+from careerpilot.backend.api.dependencies import CareerPageServiceDep, CompanyServiceDep
 from careerpilot.backend.models.company import FundingStage, HiringStatus
 from careerpilot.backend.schemas.company import (
     CompanyCreate,
@@ -12,6 +12,7 @@ from careerpilot.backend.schemas.company import (
     CompanySearchQuery,
     CompanyUpdate,
 )
+from careerpilot.backend.schemas.job_listing import CareerPageResult, JobListingRead
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -48,6 +49,23 @@ async def search_companies(
     )
     companies = await service.search_db(query)
     return [CompanyRead.model_validate(c) for c in companies]
+
+
+@router.post("/{company_id}/detect-career-page", response_model=CareerPageResult)
+async def detect_career_page(
+    company_id: int, service: CareerPageServiceDep
+) -> CareerPageResult:
+    """Detect a company's ATS platform and extract public job listings (Module 4)."""
+    return await service.detect_for_company(company_id)
+
+
+@router.get("/{company_id}/jobs", response_model=list[JobListingRead])
+async def list_company_jobs(
+    company_id: int, service: CareerPageServiceDep
+) -> list[JobListingRead]:
+    """List stored job listings for a company."""
+    jobs = await service.list_jobs(company_id)
+    return [JobListingRead.model_validate(j) for j in jobs]
 
 
 @router.post("", response_model=CompanyRead, status_code=status.HTTP_201_CREATED)

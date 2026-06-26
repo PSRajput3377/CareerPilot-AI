@@ -8,11 +8,15 @@ Discovery (Module 5) links people, and outreach references the company.
 from __future__ import annotations
 
 import enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from careerpilot.backend.database.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from careerpilot.backend.models.job_listing import JobListing
 
 
 class HiringStatus(enum.StrEnum):
@@ -75,3 +79,13 @@ class Company(Base, TimestampMixin):
 
     # Provenance: which discovery provider produced/last-updated this record.
     source: Mapped[str | None] = mapped_column(String(64))
+
+    # Detected ATS platform (Module 4). `hiring_platform` retains the raw slug;
+    # this stores the normalized enum once career-page detection has run.
+    ats_platform: Mapped[str | None] = mapped_column(String(32))
+
+    job_listings: Mapped[list[JobListing]] = relationship(
+        back_populates="company",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
