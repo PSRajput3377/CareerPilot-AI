@@ -10,6 +10,7 @@ from careerpilot.backend.models.company import (
     HiringStatus,
 )
 from careerpilot.backend.models.job_listing import ATSPlatform, JobListing
+from careerpilot.backend.models.person import EmailSource, Person, PersonRole
 from careerpilot.backend.models.user_profile import (
     Achievement,
     Education,
@@ -33,4 +34,7 @@ __all__ = [
     "HiringStatus",
     "JobListing",
     "ATSPlatform",
+    "Person",
+    "PersonRole",
+    "EmailSource",
 ]

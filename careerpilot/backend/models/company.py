@@ -17,6 +17,7 @@ from careerpilot.backend.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from careerpilot.backend.models.job_listing import JobListing
+    from careerpilot.backend.models.person import Person
 
 
 class HiringStatus(enum.StrEnum):
@@ -85,6 +86,12 @@ class Company(Base, TimestampMixin):
     ats_platform: Mapped[str | None] = mapped_column(String(32))
 
     job_listings: Mapped[list[JobListing]] = relationship(
+        back_populates="company",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    people: Mapped[list[Person]] = relationship(
         back_populates="company",
         cascade="all, delete-orphan",
         lazy="selectin",

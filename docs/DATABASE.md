@@ -82,11 +82,28 @@ Module 4 also adds `companies.ats_platform` (normalized enum: greenhouse, lever,
 ashby, workday, smartrecruiters, bamboohr, jobvite, oracle, sap_successfactors,
 custom, unknown).
 
+### `people` (Module 5)
+
+```
+people
+├─ id                 PK
+├─ company_id         FK → companies (cascade)
+├─ external_id        provider-assigned id (for idempotent upsert)
+├─ full_name (indexed) / title / department / location
+├─ linkedin_url / profile_url
+├─ email (indexed)    likely deliverable address (may be a public pattern)
+├─ email_verified     bool — discovery never sets this; Module 7 verifies
+├─ role               enum (recruiter | hiring_manager | executive | engineer | employee | unknown)
+├─ email_source       enum (public | pattern | unknown)
+├─ source             provenance (discovery provider id)
+└─ created_at / updated_at
+   unique (company_id, external_id)
+```
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 5 People Discovery | `people` |
 | 7 Email Verification | `email_verifications` |
 | 10 Templates | `email_templates` |
 | 13 Application Tracker | `applications`, `application_events` |

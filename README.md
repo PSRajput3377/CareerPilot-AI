@@ -51,7 +51,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 2 | Resume Parser | ✅ Done |
 | 3 | Company Discovery | ✅ Done |
 | 4 | Career Page Detection | ✅ Done |
-| 5 | People Discovery | ⏳ Planned |
+| 5 | People Discovery | ✅ Done |
 | 6 | Email Pattern Generator | ⏳ Planned |
 | 7 | Email Verification | ⏳ Planned |
 | 8 | Job Matching AI | ⏳ Planned |
@@ -335,6 +335,43 @@ on the company (`ats_platform`).
 
 ---
 
+### Step 8c — Discover people at a company
+
+Once a company is saved, find recruiters and employees to reach out to. People
+are saved to the company so downstream modules (email verification, drafting,
+sending) can target them.
+
+```bash
+careerpilot discover-people 1            # 1 = the company id from Step 8
+```
+
+Filter by role or title:
+
+```bash
+careerpilot discover-people 1 --role recruiter
+careerpilot discover-people 1 --title "engineering manager" --limit 5
+```
+
+The command prints a table with person ID, name, role (recruiter, hiring
+manager, engineer, …), title, email, and email source. Discovery is offline and
+deterministic: well-known companies (Stripe, Anthropic) have a curated roster;
+any other company gets a synthesized roster so you can exercise the full flow.
+
+> **Email policy.** When a company domain is known, a likely `first.last@domain`
+> address is attached and marked `public` — but **left unverified**. Verification
+> is a separate step (Module 7), and nothing is ever auto-sent to an unverified
+> address. People without a known domain are returned with no email.
+
+**Via the API:**
+
+- `POST /api/v1/companies/{id}/people/discover` — discover + persist
+- `GET /api/v1/companies/{id}/people` — list saved people (filter by `role`, `title`, `department`)
+- `GET /api/v1/people/{person_id}` — read one person
+- `PATCH /api/v1/people/{person_id}` — update (e.g. mark `email_verified`)
+- `DELETE /api/v1/people/{person_id}` — remove a person
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -356,6 +393,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `POST` | `/api/v1/resumes/parse-into-profile` | Upload + merge into profile |
 | `POST` | `/api/v1/companies/discover` | Discover and save companies |
 | `GET` | `/api/v1/companies/search` | Search saved companies |
+| `POST` | `/api/v1/companies/{id}/people/discover` | Discover people at a company |
+| `GET` | `/api/v1/companies/{id}/people` | List saved people for a company |
 
 **Example — create a profile via curl:**
 
@@ -462,7 +501,7 @@ of git history:
 | Empty folder in Cursor/VS Code | Open the correct project folder (no trailing space in the name) |
 | `CAREERPILOT_ENCRYPTION_KEY` errors in production | Run `careerpilot generate-encryption-key` and set it in `.env` |
 | Resume parse returns little data | Try a `.txt` resume first; PDFs with scanned images need OCR (not yet supported) |
-| `discover-people`, `send-email`, etc. say "not implemented" | Those modules are planned — see the Status table below |
+| `send-email`, `verify-emails`, etc. say "not implemented" | Those modules are planned — see the Status table below |
 
 ---
 
@@ -470,7 +509,6 @@ of git history:
 
 These CLI commands exist as stubs but will show a "coming soon" message:
 
-- `discover-people` — find recruiters and employees
 - `verify-emails` — check email deliverability
 - `generate-cover-letter` — AI cover letters
 - `send-email` — send outreach via Gmail/SMTP

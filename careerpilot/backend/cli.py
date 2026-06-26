@@ -17,13 +17,17 @@ from rich.table import Table
 
 from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
+from careerpilot.backend.models.person import PersonRole
 from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.job_listing import JobListingRepository
+from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.schemas.company import CompanySearchQuery
+from careerpilot.backend.schemas.person import PeopleSearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
+from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
 
@@ -213,6 +217,48 @@ def detect_career_page(
     console.print(f"Listings saved: {saved}")
 
 
+@app.command("discover-people")
+def discover_people(
+    company_id: Annotated[int, typer.Argument(help="Company id to find people at")],
+    role: Annotated[
+        str | None, typer.Option(help="Filter by role (recruiter, engineer, ...)")
+    ] = None,
+    title: Annotated[str | None, typer.Option(help="Filter by title keyword")] = None,
+    limit: Annotated[int, typer.Option(help="Max results")] = 20,
+) -> None:
+    """Discover recruiters and employees at a company and persist them (Module 5)."""
+    role_enum = PersonRole(role) if role else None
+    query = PeopleSearchQuery(role=role_enum, title=title, limit=limit)
+
+    async def _do():
+        async with session_scope() as session:
+            service = PeopleService(
+                CompanyRepository(session), PersonRepository(session)
+            )
+            people, saved = await service.discover_for_company(company_id, query)
+            # Detach the data we need before the session closes.
+            rows = [
+                (p.id, p.full_name, p.role.value, p.title, p.email, p.email_source.value)
+                for p in people
+            ]
+            return rows, saved
+
+    rows, saved = _run(_do())
+    table = Table(title=f"People at company id={company_id}")
+    table.add_column("ID", justify="right")
+    table.add_column("Name")
+    table.add_column("Role")
+    table.add_column("Title")
+    table.add_column("Email")
+    table.add_column("Email Source")
+    for pid, name, prole, ptitle, email, esource in rows:
+        table.add_row(
+            str(pid), name, prole, ptitle or "-", email or "-", esource
+        )
+    console.print(table)
+    console.print(f"[green]People saved:[/green] {saved}")
+
+
 @profile_app.command("show")
 def profile_show(profile_id: int) -> None:
     """Show a single profile as JSON."""
@@ -233,7 +279,6 @@ def profile_show(profile_id: int) -> None:
 # --------------------------------------------------------------------------- #
 
 _UPCOMING = {
-    "discover-people": "Module 5 — People Discovery",
     "verify-emails": "Module 7 — Email Verification",
     "generate-cover-letter": "Module 9 — Cover Letter Generator",
     "send-email": "Module 15 — Email Sending",
