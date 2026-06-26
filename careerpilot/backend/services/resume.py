@@ -134,4 +134,6 @@ def _merge_skills(existing: list[Skill], parsed: ParsedResume) -> None:
         key = skill.name.lower()
         if key not in have:
             have.add(key)
-            existing.append(Skill(name=skill.name, proficiency=skill.proficiency, years=skill.years))
+            existing.append(
+                Skill(name=skill.name, proficiency=skill.proficiency, years=skill.years)
+            )

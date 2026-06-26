@@ -48,7 +48,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 1 | User Profile | ✅ Done |
 | 19 | Configuration (`config.yaml` + env) | ✅ Done |
 | 20 | Security (secret encryption) | ✅ Done |
-| 2 | Resume Parser | ⏳ Planned |
+| 2 | Resume Parser | ✅ Done |
 | 3 | Company Discovery | ⏳ Planned |
 | 4 | Career Page Detection | ⏳ Planned |
 | 5 | People Discovery | ⏳ Planned |

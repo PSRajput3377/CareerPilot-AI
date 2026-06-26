@@ -33,9 +33,13 @@ user_profiles
 ├─< profile_skills        (profile_id, name) unique
 │     ├─ name, proficiency, years
 ├─< profile_experiences
-│     ├─ company, title, location, start_date, end_date, description
-└─< profile_educations
-      ├─ institution, degree, field_of_study, start_date, end_date, grade
+│     ├─ company, title, location, start_date, end_date, description, is_internship
+├─< profile_educations
+│     ├─ institution, degree, field_of_study, start_date, end_date, grade
+├─< profile_projects            (added by Module 2)
+│     ├─ name, description, tech_stack (csv), url
+└─< profile_achievements        (added by Module 2)
+      ├─ description
 ```
 
 `< ` denotes a one-to-many relationship cascaded from `user_profiles`.
