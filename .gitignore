@@ -35,4 +35,6 @@ coverage.xml
 # IDE / OS
 .idea/
 .vscode/
+.cursor/
+.claude/
 .DS_Store

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Strip AI tool co-author trailers so they never land in git history.
+commit_msg_file="$1"
+[ -f "$commit_msg_file" ] || exit 0
+
+tmp=$(mktemp) || exit 0
+trap 'rm -f "$tmp"' EXIT
+
+sed -E \
+  -e '/^Co-authored-by:.*[Cc]ursor/Id' \
+  -e '/^Co-authored-by:.*[Cc]laude/Id' \
+  -e '/^Co-authored-by:.*cursoragent/Id' \
+  "$commit_msg_file" > "$tmp"
+
+mv "$tmp" "$commit_msg_file"
+exit 0
