@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from careerpilot.backend.api.v1 import (
     companies,
     email_patterns,
+    email_verifications,
     people,
     profiles,
     resumes,
@@ -20,5 +21,6 @@ api_router.include_router(resumes.router)
 api_router.include_router(companies.router)
 api_router.include_router(people.router)
 api_router.include_router(email_patterns.router)
+api_router.include_router(email_verifications.router)
 
 __all__ = ["api_router"]

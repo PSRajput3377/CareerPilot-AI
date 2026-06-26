@@ -23,6 +23,7 @@ from careerpilot.backend.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from careerpilot.backend.models.company import Company
+    from careerpilot.backend.models.email_verification import EmailVerification
 
 
 class PersonRole(enum.StrEnum):
@@ -88,3 +89,9 @@ class Person(Base, TimestampMixin):
     source: Mapped[str | None] = mapped_column(String(64))
 
     company: Mapped[Company] = relationship(back_populates="people")
+
+    verifications: Mapped[list[EmailVerification]] = relationship(
+        back_populates="person",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )

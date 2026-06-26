@@ -9,6 +9,10 @@ from careerpilot.backend.models.company import (
     FundingStage,
     HiringStatus,
 )
+from careerpilot.backend.models.email_verification import (
+    EmailVerification,
+    VerificationStatus,
+)
 from careerpilot.backend.models.job_listing import ATSPlatform, JobListing
 from careerpilot.backend.models.person import EmailSource, Person, PersonRole
 from careerpilot.backend.models.user_profile import (
@@ -37,4 +41,6 @@ __all__ = [
     "Person",
     "PersonRole",
     "EmailSource",
+    "EmailVerification",
+    "VerificationStatus",
 ]

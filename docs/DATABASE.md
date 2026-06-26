@@ -100,11 +100,29 @@ people
    unique (company_id, external_id)
 ```
 
+### `email_verifications` (Module 7)
+
+```
+email_verifications
+├─ id                 PK
+├─ person_id          FK → people (cascade)
+├─ email              not null (indexed)
+├─ status             enum (valid | invalid | risky | unknown)
+├─ syntax_ok / domain_ok / mx_found / is_disposable / is_role_account  bools
+├─ confidence         float 0..1
+├─ reason             human-readable verdict explanation
+├─ verifier           which verifier produced the result
+└─ created_at / updated_at
+   unique (person_id, email)
+```
+
+A `valid` verdict sets `people.email_verified = true` — the deliverability gate
+that downstream sending honors.
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 7 Email Verification | `email_verifications` |
 | 10 Templates | `email_templates` |
 | 13 Application Tracker | `applications`, `application_events` |
 | 14/15 Outreach | `outreach_messages` (with `pending_review` state), `outreach_events` |

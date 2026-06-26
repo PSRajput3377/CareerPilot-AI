@@ -19,6 +19,9 @@ from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
 from careerpilot.backend.models.person import PersonRole
 from careerpilot.backend.repositories.company import CompanyRepository
+from careerpilot.backend.repositories.email_verification import (
+    EmailVerificationRepository,
+)
 from careerpilot.backend.repositories.job_listing import JobListingRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
@@ -31,6 +34,7 @@ from careerpilot.backend.services.email_pattern import (
     EmailPatternGenerator,
     EmailPatternService,
 )
+from careerpilot.backend.services.email_verification import EmailVerificationService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -313,6 +317,68 @@ def guess_company_emails(
     console.print(f"[green]Filled:[/green] {sum(1 for _, f, _ in rows if f)}/{len(rows)}")
 
 
+@app.command("check-email")
+def check_email(
+    email: Annotated[str, typer.Argument(help="Email address to verify")],
+) -> None:
+    """Verify a single email's deliverability (Module 7, stateless)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = EmailVerificationService(
+                CompanyRepository(session),
+                PersonRepository(session),
+                EmailVerificationRepository(session),
+            )
+            outcome = await service.check(email)
+            return outcome
+
+    outcome = _run(_do())
+    color = {
+        "valid": "green",
+        "risky": "yellow",
+        "invalid": "red",
+        "unknown": "white",
+    }.get(outcome.status.value, "white")
+    console.print(
+        f"[{color}]{outcome.status.value.upper()}[/{color}] "
+        f"{outcome.email} (confidence {outcome.confidence:.0%})"
+    )
+    console.print(f"Reason: {outcome.reason or '-'}")
+
+
+@app.command("verify-emails")
+def verify_emails(
+    company_id: Annotated[int, typer.Argument(help="Company id to verify people for")],
+) -> None:
+    """Verify deliverability for every person with an email at a company (Module 7)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = EmailVerificationService(
+                CompanyRepository(session),
+                PersonRepository(session),
+                EmailVerificationRepository(session),
+            )
+            results = await service.verify_company(company_id)
+            return [
+                (r.person_id, r.outcome.email, r.outcome.status.value, r.email_verified)
+                for r in results
+            ]
+
+    rows = _run(_do())
+    table = Table(title=f"Email verification for company id={company_id}")
+    table.add_column("Person ID", justify="right")
+    table.add_column("Email")
+    table.add_column("Status")
+    table.add_column("Verified")
+    for pid, email, status, verified in rows:
+        table.add_row(str(pid), email or "-", status, "yes" if verified else "no")
+    console.print(table)
+    valid = sum(1 for _, _, s, _ in rows if s == "valid")
+    console.print(f"[green]Valid:[/green] {valid}/{len(rows)}")
+
+
 @profile_app.command("show")
 def profile_show(profile_id: int) -> None:
     """Show a single profile as JSON."""
@@ -333,7 +399,6 @@ def profile_show(profile_id: int) -> None:
 # --------------------------------------------------------------------------- #
 
 _UPCOMING = {
-    "verify-emails": "Module 7 — Email Verification",
     "generate-cover-letter": "Module 9 — Cover Letter Generator",
     "send-email": "Module 15 — Email Sending",
     "follow-up": "Module 17 — Follow-up Generator",

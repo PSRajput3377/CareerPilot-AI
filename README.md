@@ -53,7 +53,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 4 | Career Page Detection | ✅ Done |
 | 5 | People Discovery | ✅ Done |
 | 6 | Email Pattern Generator | ✅ Done |
-| 7 | Email Verification | ⏳ Planned |
+| 7 | Email Verification | ✅ Done |
 | 8 | Job Matching AI | ⏳ Planned |
 | 9 | Cover Letter Generator | ⏳ Planned |
 | 10 | Email Template Engine | ⏳ Planned |
@@ -419,6 +419,51 @@ The best candidate is written onto each person who lacks an email, marked
 
 ---
 
+### Step 8e — Verify email deliverability
+
+Before any outreach, CareerPilot checks whether an email is likely deliverable.
+This is the *"verify deliverability"* gate of the pipeline: a person's
+`email_verified` flag is only set once their address passes, and nothing is sent
+to an address that has not.
+
+**Check any address (stateless, nothing saved):**
+
+```bash
+careerpilot check-email jane.doe@stripe.com
+```
+
+```
+VALID jane.doe@stripe.com (confidence 75%)
+Reason: Valid syntax and mail-accepting domain.
+```
+
+Verdicts are one of `valid`, `risky` (disposable domain or role mailbox like
+`careers@`), `invalid` (malformed or non-mail domain), or `unknown`.
+
+**Verify everyone discovered at a company:**
+
+```bash
+careerpilot verify-emails 1            # 1 = company id
+```
+
+Each person with an email is checked; the verdict is persisted, and
+`email_verified` is set to `yes` only on a `valid` result.
+
+> **Offline & deterministic.** Verification runs syntax, domain-plausibility,
+> disposable-domain, and role-account checks with no network, so it is hermetic
+> and testable. A live SMTP/DNS verifier can register later without changing any
+> caller. Only a `valid` verdict flips `email_verified`; downstream sending
+> (Module 15) refuses unverified addresses.
+
+**Via the API:**
+
+- `GET /api/v1/email-verification/check?email=...` — stateless check
+- `POST /api/v1/people/{person_id}/verify-email` — verify + persist for one person
+- `GET /api/v1/people/{person_id}/verifications` — list a person's verdicts
+- `POST /api/v1/companies/{id}/people/verify-emails` — verify everyone at a company
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -444,6 +489,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `GET` | `/api/v1/companies/{id}/people` | List saved people for a company |
 | `GET` | `/api/v1/email-patterns/preview` | Preview guessed emails (name + domain) |
 | `POST` | `/api/v1/companies/{id}/people/guess-emails` | Fill missing emails for a company |
+| `GET` | `/api/v1/email-verification/check` | Check an email's deliverability |
+| `POST` | `/api/v1/companies/{id}/people/verify-emails` | Verify everyone at a company |
 
 **Example — create a profile via curl:**
 
@@ -558,7 +605,6 @@ of git history:
 
 These CLI commands exist as stubs but will show a "coming soon" message:
 
-- `verify-emails` — check email deliverability
 - `generate-cover-letter` — AI cover letters
 - `send-email` — send outreach via Gmail/SMTP
 - `follow-up` — automated follow-up drafts
