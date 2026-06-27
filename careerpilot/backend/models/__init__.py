@@ -14,6 +14,7 @@ from careerpilot.backend.models.email_verification import (
     VerificationStatus,
 )
 from careerpilot.backend.models.job_listing import ATSPlatform, JobListing
+from careerpilot.backend.models.job_match import JobMatch
 from careerpilot.backend.models.person import EmailSource, Person, PersonRole
 from careerpilot.backend.models.user_profile import (
     Achievement,
@@ -38,6 +39,7 @@ __all__ = [
     "HiringStatus",
     "JobListing",
     "ATSPlatform",
+    "JobMatch",
     "Person",
     "PersonRole",
     "EmailSource",

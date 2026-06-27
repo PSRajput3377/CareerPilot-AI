@@ -23,6 +23,7 @@ from careerpilot.backend.repositories.email_verification import (
     EmailVerificationRepository,
 )
 from careerpilot.backend.repositories.job_listing import JobListingRepository
+from careerpilot.backend.repositories.job_match import JobMatchRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.schemas.company import CompanySearchQuery
@@ -35,6 +36,7 @@ from careerpilot.backend.services.email_pattern import (
     EmailPatternService,
 )
 from careerpilot.backend.services.email_verification import EmailVerificationService
+from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -377,6 +379,55 @@ def verify_emails(
     console.print(table)
     valid = sum(1 for _, _, s, _ in rows if s == "valid")
     console.print(f"[green]Valid:[/green] {valid}/{len(rows)}")
+
+
+@app.command("match-jobs")
+def match_jobs(
+    profile_id: Annotated[int, typer.Argument(help="Profile id to match")],
+    company_id: Annotated[int, typer.Argument(help="Company id whose jobs to score")],
+    limit: Annotated[int, typer.Option(help="Max rows to show")] = 20,
+) -> None:
+    """Score a profile against a company's job listings, ranked (Module 8)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = JobMatchingService(
+                UserProfileRepository(session),
+                CompanyRepository(session),
+                JobListingRepository(session),
+                JobMatchRepository(session),
+            )
+            results = await service.match_company(profile_id, company_id)
+            return [
+                (
+                    r.job_listing_id,
+                    r.title,
+                    r.match.score,
+                    r.match.skill_score,
+                    ", ".join(r.match.matched_skills) or "-",
+                    ", ".join(r.match.missing_skills) or "-",
+                )
+                for r in results[:limit]
+            ]
+
+    rows = _run(_do())
+    table = Table(title=f"Job matches: profile {profile_id} × company {company_id}")
+    table.add_column("Job ID", justify="right")
+    table.add_column("Title")
+    table.add_column("Score", justify="right")
+    table.add_column("Skills", justify="right")
+    table.add_column("Matched")
+    table.add_column("Missing")
+    for jid, title, score, skill, matched, missing in rows:
+        table.add_row(
+            str(jid), title, f"{score:.0%}", f"{skill:.0%}", matched, missing
+        )
+    console.print(table)
+    if not rows:
+        console.print(
+            "[yellow]No job listings for this company — run "
+            "detect-career-page first.[/yellow]"
+        )
 
 
 @profile_app.command("show")

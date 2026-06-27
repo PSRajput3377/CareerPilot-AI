@@ -119,6 +119,22 @@ email_verifications
 A `valid` verdict sets `people.email_verified = true` — the deliverability gate
 that downstream sending honors.
 
+### `job_matches` (Module 8)
+
+```
+job_matches
+├─ id                 PK
+├─ profile_id         FK → user_profiles (cascade)
+├─ job_listing_id     FK → job_listings (cascade)
+├─ score              overall fit 0..1
+├─ skill_score / title_score / location_score   component sub-scores 0..1
+├─ matched_skills / missing_skills   comma-separated (lists in API)
+├─ rationale          human-readable explanation
+├─ matcher            which matcher produced the result
+└─ created_at / updated_at
+   unique (profile_id, job_listing_id)
+```
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |

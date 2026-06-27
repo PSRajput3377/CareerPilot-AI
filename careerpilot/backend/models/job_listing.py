@@ -17,6 +17,7 @@ from careerpilot.backend.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from careerpilot.backend.models.company import Company
+    from careerpilot.backend.models.job_match import JobMatch
 
 
 class ATSPlatform(enum.StrEnum):
@@ -60,3 +61,9 @@ class JobListing(Base, TimestampMixin):
     remote: Mapped[bool | None] = mapped_column()
 
     company: Mapped[Company] = relationship(back_populates="job_listings")
+
+    matches: Mapped[list[JobMatch]] = relationship(
+        back_populates="job_listing",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )

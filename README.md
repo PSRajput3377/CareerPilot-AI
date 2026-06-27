@@ -54,7 +54,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 5 | People Discovery | ✅ Done |
 | 6 | Email Pattern Generator | ✅ Done |
 | 7 | Email Verification | ✅ Done |
-| 8 | Job Matching AI | ⏳ Planned |
+| 8 | Job Matching AI | ✅ Done |
 | 9 | Cover Letter Generator | ⏳ Planned |
 | 10 | Email Template Engine | ⏳ Planned |
 | 11 | Subject Generator | ⏳ Planned |
@@ -464,6 +464,40 @@ Each person with an email is checked; the verdict is persisted, and
 
 ---
 
+### Step 8f — Match your profile to a company's jobs
+
+Once a company's job listings have been extracted (Step 8b,
+`detect-career-page`), score how well your profile fits each role. Matching
+prioritizes which jobs to pursue and feeds personalization downstream.
+
+```bash
+careerpilot match-jobs 1 1     # profile_id  company_id
+```
+
+```
+Job ID  Title                    Score  Skills  Matched                      Missing
+1       Senior Backend Engineer  100%   100%    aws, fastapi, postgresql...  -
+2       Frontend Designer        38%    50%     -                            -
+```
+
+Each match blends three components: **skills** (overlap between your skills and
+those named in the job, the dominant factor), **title** (alignment with your
+preferred role), and **location** (remote always fits; otherwise a location
+match). The stored match also records matched/missing skills and a rationale.
+
+> **Offline & deterministic.** Matching uses a heuristic scorer with no network,
+> so it is hermetic and testable. An LLM-backed matcher can register later
+> without changing callers — it falls back to the heuristic when no API key is
+> configured (same pattern as the resume parser).
+
+**Via the API:**
+
+- `POST /api/v1/profiles/{id}/match/companies/{company_id}` — score all jobs at a company (ranked)
+- `POST /api/v1/profiles/{id}/match/jobs/{job_listing_id}` — score one job
+- `GET /api/v1/profiles/{id}/matches` — list stored matches (optionally `?company_id=`)
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -491,6 +525,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `POST` | `/api/v1/companies/{id}/people/guess-emails` | Fill missing emails for a company |
 | `GET` | `/api/v1/email-verification/check` | Check an email's deliverability |
 | `POST` | `/api/v1/companies/{id}/people/verify-emails` | Verify everyone at a company |
+| `POST` | `/api/v1/profiles/{id}/match/companies/{company_id}` | Score a profile against a company's jobs |
+| `GET` | `/api/v1/profiles/{id}/matches` | List a profile's ranked job matches |
 
 **Example — create a profile via curl:**
 

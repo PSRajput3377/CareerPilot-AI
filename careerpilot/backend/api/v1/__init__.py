@@ -10,6 +10,7 @@ from careerpilot.backend.api.v1 import (
     companies,
     email_patterns,
     email_verifications,
+    job_matches,
     people,
     profiles,
     resumes,
@@ -22,5 +23,6 @@ api_router.include_router(companies.router)
 api_router.include_router(people.router)
 api_router.include_router(email_patterns.router)
 api_router.include_router(email_verifications.router)
+api_router.include_router(job_matches.router)
 
 __all__ = ["api_router"]

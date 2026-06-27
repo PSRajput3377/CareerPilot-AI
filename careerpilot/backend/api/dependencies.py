@@ -17,12 +17,14 @@ from careerpilot.backend.repositories.email_verification import (
     EmailVerificationRepository,
 )
 from careerpilot.backend.repositories.job_listing import JobListingRepository
+from careerpilot.backend.repositories.job_match import JobMatchRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.services.career_page import CareerPageService
 from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.email_pattern import EmailPatternService
 from careerpilot.backend.services.email_verification import EmailVerificationService
+from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.user_profile import UserProfileService
@@ -84,4 +86,18 @@ def get_email_verification_service(session: DbSession) -> EmailVerificationServi
 
 EmailVerificationServiceDep = Annotated[
     EmailVerificationService, Depends(get_email_verification_service)
+]
+
+
+def get_job_matching_service(session: DbSession) -> JobMatchingService:
+    return JobMatchingService(
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        JobListingRepository(session),
+        JobMatchRepository(session),
+    )
+
+
+JobMatchingServiceDep = Annotated[
+    JobMatchingService, Depends(get_job_matching_service)
 ]
