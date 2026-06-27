@@ -55,7 +55,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 6 | Email Pattern Generator | ✅ Done |
 | 7 | Email Verification | ✅ Done |
 | 8 | Job Matching AI | ✅ Done |
-| 9 | Cover Letter Generator | ⏳ Planned |
+| 9 | Cover Letter Generator | ✅ Done |
 | 10 | Email Template Engine | ⏳ Planned |
 | 11 | Subject Generator | ⏳ Planned |
 | 12 | AI Personalization Engine | ⏳ Planned |
@@ -498,6 +498,38 @@ match). The stored match also records matched/missing skills and a rationale.
 
 ---
 
+### Step 8g — Generate a cover letter
+
+Draft a personalized, human-sounding cover letter for a profile targeting a
+company (and optionally a specific role). The letter is a **draft for review** —
+it is never sent automatically.
+
+```bash
+careerpilot generate-cover-letter 1 1                       # profile_id  company_id
+careerpilot generate-cover-letter 1 1 --tone enthusiastic   # professional | enthusiastic | concise
+careerpilot generate-cover-letter 1 1 --job-listing-id 3    # target a specific role
+careerpilot generate-cover-letter 1 1 --no-save             # preview only, don't persist
+```
+
+The draft is grounded in concrete details — the specific role, the company and
+its industry, and the candidate's overlapping skills (pulled from a job match
+when one exists) — so it reads as individual rather than templated.
+
+> **Offline & deterministic.** Generation uses a tone-aware template with no
+> network, so it is hermetic and testable. An LLM-backed generator can register
+> later without changing callers — it falls back to the template when no API key
+> is configured (same pattern as the resume parser). Saved letters are drafts;
+> sending is a separate, explicit step (Module 15).
+
+**Via the API:**
+
+- `POST /api/v1/profiles/{id}/cover-letters` — generate (persists unless `"save": false`)
+- `GET /api/v1/profiles/{id}/cover-letters` — list a profile's drafts
+- `GET /api/v1/cover-letters/{letter_id}` — read one draft
+- `DELETE /api/v1/cover-letters/{letter_id}` — delete a draft
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -527,6 +559,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `POST` | `/api/v1/companies/{id}/people/verify-emails` | Verify everyone at a company |
 | `POST` | `/api/v1/profiles/{id}/match/companies/{company_id}` | Score a profile against a company's jobs |
 | `GET` | `/api/v1/profiles/{id}/matches` | List a profile's ranked job matches |
+| `POST` | `/api/v1/profiles/{id}/cover-letters` | Generate a cover letter draft |
+| `GET` | `/api/v1/profiles/{id}/cover-letters` | List a profile's cover letter drafts |
 
 **Example — create a profile via curl:**
 
@@ -641,7 +675,6 @@ of git history:
 
 These CLI commands exist as stubs but will show a "coming soon" message:
 
-- `generate-cover-letter` — AI cover letters
 - `send-email` — send outreach via Gmail/SMTP
 - `follow-up` — automated follow-up drafts
 - `dashboard` — analytics

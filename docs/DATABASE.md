@@ -135,6 +135,23 @@ job_matches
    unique (profile_id, job_listing_id)
 ```
 
+### `cover_letters` (Module 9)
+
+```
+cover_letters
+├─ id                 PK
+├─ profile_id         FK → user_profiles (cascade)
+├─ company_id         FK → companies (cascade)
+├─ job_listing_id     FK → job_listings (set null) — optional, role-specific
+├─ subject / body     the generated draft (body not null)
+├─ tone               enum (professional | enthusiastic | concise)
+├─ word_count         int
+├─ generator          which generator produced the draft
+└─ created_at / updated_at
+```
+
+Generated letters are drafts for review — never auto-sent.
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |

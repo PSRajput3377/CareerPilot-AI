@@ -17,8 +17,10 @@ from rich.table import Table
 
 from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
+from careerpilot.backend.models.cover_letter import CoverLetterTone
 from careerpilot.backend.models.person import PersonRole
 from careerpilot.backend.repositories.company import CompanyRepository
+from careerpilot.backend.repositories.cover_letter import CoverLetterRepository
 from careerpilot.backend.repositories.email_verification import (
     EmailVerificationRepository,
 )
@@ -27,10 +29,12 @@ from careerpilot.backend.repositories.job_match import JobMatchRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.schemas.company import CompanySearchQuery
+from careerpilot.backend.schemas.cover_letter import CoverLetterRequest
 from careerpilot.backend.schemas.person import PeopleSearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
+from careerpilot.backend.services.cover_letter import CoverLetterService
 from careerpilot.backend.services.email_pattern import (
     EmailPatternGenerator,
     EmailPatternService,
@@ -430,6 +434,54 @@ def match_jobs(
         )
 
 
+@app.command("generate-cover-letter")
+def generate_cover_letter(
+    profile_id: Annotated[int, typer.Argument(help="Profile id")],
+    company_id: Annotated[int, typer.Argument(help="Target company id")],
+    job_listing_id: Annotated[
+        int | None, typer.Option(help="Target a specific job listing")
+    ] = None,
+    tone: Annotated[
+        str, typer.Option(help="professional | enthusiastic | concise")
+    ] = "professional",
+    save: Annotated[bool, typer.Option(help="Persist the draft")] = True,
+) -> None:
+    """Generate a personalized cover letter draft (Module 9).
+
+    The letter is a draft for review — it is never sent automatically.
+    """
+    request = CoverLetterRequest(
+        company_id=company_id,
+        job_listing_id=job_listing_id,
+        tone=CoverLetterTone(tone),
+        save=save,
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = CoverLetterService(
+                UserProfileRepository(session),
+                CompanyRepository(session),
+                JobListingRepository(session),
+                CoverLetterRepository(session),
+                JobMatchRepository(session),
+            )
+            draft, saved = await service.generate(profile_id, request)
+            return draft, (saved.id if saved else None)
+
+    draft, saved_id = _run(_do())
+    console.print(f"[bold]Subject:[/bold] {draft.subject}")
+    console.print()
+    console.print(draft.body)
+    console.print()
+    console.print(
+        f"[dim]({draft.word_count} words, tone={draft.tone.value}, "
+        f"generator={draft.generator})[/dim]"
+    )
+    if saved_id is not None:
+        console.print(f"[green]Saved cover letter id={saved_id}[/green]")
+
+
 @profile_app.command("show")
 def profile_show(profile_id: int) -> None:
     """Show a single profile as JSON."""
@@ -450,7 +502,6 @@ def profile_show(profile_id: int) -> None:
 # --------------------------------------------------------------------------- #
 
 _UPCOMING = {
-    "generate-cover-letter": "Module 9 — Cover Letter Generator",
     "send-email": "Module 15 — Email Sending",
     "follow-up": "Module 17 — Follow-up Generator",
     "dashboard": "Module 16 — Analytics Dashboard",

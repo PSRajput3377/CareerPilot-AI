@@ -9,6 +9,7 @@ from careerpilot.backend.models.company import (
     FundingStage,
     HiringStatus,
 )
+from careerpilot.backend.models.cover_letter import CoverLetter, CoverLetterTone
 from careerpilot.backend.models.email_verification import (
     EmailVerification,
     VerificationStatus,
@@ -45,4 +46,6 @@ __all__ = [
     "EmailSource",
     "EmailVerification",
     "VerificationStatus",
+    "CoverLetter",
+    "CoverLetterTone",
 ]
