@@ -152,11 +152,27 @@ cover_letters
 
 Generated letters are drafts for review — never auto-sent.
 
+### `email_templates` (Module 10)
+
+```
+email_templates
+├─ id                 PK
+├─ name               not null, unique (indexed)
+├─ category           enum (outreach | referral | follow_up | thank_you | other)
+├─ subject_template / body_template   text with {placeholder} slots (not null)
+├─ description        optional
+├─ is_builtin         seeded templates are read-only
+└─ created_at / updated_at
+   unique (name)
+```
+
+Four built-in templates are seeded on first use. Rendering substitutes
+placeholders from a profile/company/person/job context — it never sends.
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 10 Templates | `email_templates` |
 | 13 Application Tracker | `applications`, `application_events` |
 | 14/15 Outreach | `outreach_messages` (with `pending_review` state), `outreach_events` |
 

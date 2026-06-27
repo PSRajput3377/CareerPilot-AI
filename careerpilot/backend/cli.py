@@ -21,6 +21,7 @@ from careerpilot.backend.models.cover_letter import CoverLetterTone
 from careerpilot.backend.models.person import PersonRole
 from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.cover_letter import CoverLetterRepository
+from careerpilot.backend.repositories.email_template import EmailTemplateRepository
 from careerpilot.backend.repositories.email_verification import (
     EmailVerificationRepository,
 )
@@ -30,6 +31,7 @@ from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
 from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.cover_letter import CoverLetterRequest
+from careerpilot.backend.schemas.email_template import RenderContext
 from careerpilot.backend.schemas.person import PeopleSearchQuery
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
@@ -43,6 +45,7 @@ from careerpilot.backend.services.email_verification import EmailVerificationSer
 from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
+from careerpilot.backend.services.templating import EmailTemplateService
 from careerpilot.backend.services.user_profile import UserProfileService
 
 app = typer.Typer(
@@ -480,6 +483,75 @@ def generate_cover_letter(
     )
     if saved_id is not None:
         console.print(f"[green]Saved cover letter id={saved_id}[/green]")
+
+
+def _template_service(session) -> EmailTemplateService:
+    return EmailTemplateService(
+        EmailTemplateRepository(session),
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        PersonRepository(session),
+        JobListingRepository(session),
+    )
+
+
+@app.command("list-templates")
+def list_templates() -> None:
+    """List available email templates, seeding built-ins if needed (Module 10)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = _template_service(session)
+            templates = await service.list()
+            return [
+                (t.id, t.name, t.category.value, "builtin" if t.is_builtin else "custom")
+                for t in templates
+            ]
+
+    rows = _run(_do())
+    table = Table(title="Email Templates")
+    table.add_column("ID", justify="right")
+    table.add_column("Name")
+    table.add_column("Category")
+    table.add_column("Kind")
+    for tid, name, category, kind in rows:
+        table.add_row(str(tid), name, category, kind)
+    console.print(table)
+
+
+@app.command("render-template")
+def render_template_cmd(
+    template_id: Annotated[int, typer.Argument(help="Template id to render")],
+    profile_id: Annotated[int, typer.Option(help="Candidate profile id")],
+    company_id: Annotated[int | None, typer.Option(help="Target company id")] = None,
+    person_id: Annotated[int | None, typer.Option(help="Recipient person id")] = None,
+    job_listing_id: Annotated[
+        int | None, typer.Option(help="Target job listing id")
+    ] = None,
+) -> None:
+    """Render an email template against a resolved context (Module 10)."""
+    ctx = RenderContext(
+        profile_id=profile_id,
+        company_id=company_id,
+        person_id=person_id,
+        job_listing_id=job_listing_id,
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = _template_service(session)
+            return await service.render(template_id, ctx)
+
+    rendered = _run(_do())
+    console.print(f"[bold]Subject:[/bold] {rendered.subject}")
+    console.print()
+    console.print(rendered.body)
+    if rendered.missing_placeholders:
+        console.print()
+        console.print(
+            "[yellow]Missing placeholders (left intact): "
+            f"{', '.join(rendered.missing_placeholders)}[/yellow]"
+        )
 
 
 @profile_app.command("show")

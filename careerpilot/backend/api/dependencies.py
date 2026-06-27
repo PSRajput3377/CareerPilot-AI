@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from careerpilot.backend.database.session import get_db
 from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.cover_letter import CoverLetterRepository
+from careerpilot.backend.repositories.email_template import EmailTemplateRepository
 from careerpilot.backend.repositories.email_verification import (
     EmailVerificationRepository,
 )
@@ -29,6 +30,7 @@ from careerpilot.backend.services.email_verification import EmailVerificationSer
 from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
+from careerpilot.backend.services.templating import EmailTemplateService
 from careerpilot.backend.services.user_profile import UserProfileService
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
@@ -117,4 +119,19 @@ def get_cover_letter_service(session: DbSession) -> CoverLetterService:
 
 CoverLetterServiceDep = Annotated[
     CoverLetterService, Depends(get_cover_letter_service)
+]
+
+
+def get_email_template_service(session: DbSession) -> EmailTemplateService:
+    return EmailTemplateService(
+        EmailTemplateRepository(session),
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        PersonRepository(session),
+        JobListingRepository(session),
+    )
+
+
+EmailTemplateServiceDep = Annotated[
+    EmailTemplateService, Depends(get_email_template_service)
 ]

@@ -56,7 +56,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 7 | Email Verification | ✅ Done |
 | 8 | Job Matching AI | ✅ Done |
 | 9 | Cover Letter Generator | ✅ Done |
-| 10 | Email Template Engine | ⏳ Planned |
+| 10 | Email Template Engine | ✅ Done |
 | 11 | Subject Generator | ⏳ Planned |
 | 12 | AI Personalization Engine | ⏳ Planned |
 | 13 | Application Tracker | ⏳ Planned |
@@ -530,6 +530,45 @@ when one exists) — so it reads as individual rather than templated.
 
 ---
 
+### Step 8h — Use email templates
+
+Reusable, named email templates with `{placeholder}` slots that render against a
+context (you, the company, the recipient, and an optional role). Four built-in
+templates ship seeded and read-only — `cold-outreach`, `referral-request`,
+`follow-up`, `thank-you` — and you can add your own via the API.
+
+**List templates (built-ins are auto-seeded on first use):**
+
+```bash
+careerpilot list-templates
+```
+
+**Render a template against a context:**
+
+```bash
+careerpilot render-template 1 --profile-id 1 --company-id 1 --person-id 1
+careerpilot render-template 1 --profile-id 1 --company-id 1 --job-listing-id 3
+```
+
+Available placeholders: `{candidate_name}`, `{candidate_role}` (you);
+`{first_name}`, `{last_name}`, `{full_name}` (recipient); `{company}`,
+`{industry}`, `{role}`. Unknown placeholders are left intact and reported, so a
+partially-resolvable template still renders usefully. Write literal braces as
+`{{` / `}}`.
+
+> **Rendering never sends.** A rendered template is reviewable subject/body text
+> — the personalization engine (Module 12) refines it and sending (Module 15) is
+> a separate, explicit step.
+
+**Via the API:**
+
+- `GET /api/v1/email-templates` — list (auto-seeds built-ins; filter by `?category=`)
+- `POST /api/v1/email-templates` — create a custom template
+- `PATCH`/`DELETE /api/v1/email-templates/{id}` — edit/remove (built-ins are read-only)
+- `POST /api/v1/email-templates/{id}/render` — render against a context
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -561,6 +600,8 @@ Open **http://localhost:8000/docs** in your browser.
 | `GET` | `/api/v1/profiles/{id}/matches` | List a profile's ranked job matches |
 | `POST` | `/api/v1/profiles/{id}/cover-letters` | Generate a cover letter draft |
 | `GET` | `/api/v1/profiles/{id}/cover-letters` | List a profile's cover letter drafts |
+| `GET` | `/api/v1/email-templates` | List email templates |
+| `POST` | `/api/v1/email-templates/{id}/render` | Render a template against a context |
 
 **Example — create a profile via curl:**
 
