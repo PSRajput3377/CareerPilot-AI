@@ -16,6 +16,7 @@ from careerpilot.backend.api.v1 import (
     people,
     profiles,
     resumes,
+    subjects,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -28,5 +29,6 @@ api_router.include_router(email_verifications.router)
 api_router.include_router(job_matches.router)
 api_router.include_router(cover_letters.router)
 api_router.include_router(email_templates.router)
+api_router.include_router(subjects.router)
 
 __all__ = ["api_router"]

@@ -30,6 +30,7 @@ from careerpilot.backend.services.email_verification import EmailVerificationSer
 from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
+from careerpilot.backend.services.subject import SubjectService
 from careerpilot.backend.services.templating import EmailTemplateService
 from careerpilot.backend.services.user_profile import UserProfileService
 
@@ -135,3 +136,15 @@ def get_email_template_service(session: DbSession) -> EmailTemplateService:
 EmailTemplateServiceDep = Annotated[
     EmailTemplateService, Depends(get_email_template_service)
 ]
+
+
+def get_subject_service(session: DbSession) -> SubjectService:
+    return SubjectService(
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        PersonRepository(session),
+        JobListingRepository(session),
+    )
+
+
+SubjectServiceDep = Annotated[SubjectService, Depends(get_subject_service)]

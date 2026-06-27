@@ -57,7 +57,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 8 | Job Matching AI | ✅ Done |
 | 9 | Cover Letter Generator | ✅ Done |
 | 10 | Email Template Engine | ✅ Done |
-| 11 | Subject Generator | ⏳ Planned |
+| 11 | Subject Generator | ✅ Done |
 | 12 | AI Personalization Engine | ⏳ Planned |
 | 13 | Application Tracker | ⏳ Planned |
 | 14 | Outreach Scheduler | ⏳ Planned |
@@ -569,6 +569,37 @@ partially-resolvable template still renders usefully. Write literal braces as
 
 ---
 
+### Step 8i — Generate subject lines
+
+Generate compelling, varied email subject lines for an outreach context. Each is
+tagged with its style (direct, personal, referral, curiosity, value), ranked,
+and flagged if it exceeds the recommended ~60-char length.
+
+```bash
+careerpilot generate-subjects --profile-id 1 --company-id 1 --person-id 1
+careerpilot generate-subjects --profile-id 1 --company-id 1 --job-listing-id 3 --limit 8
+```
+
+```
+1  Quick question, Maya                       referral   86%  yes
+2  Jane → Stripe                              personal   71%  yes
+3  Bringing Backend Engineer experience to..  value      57%  yes
+```
+
+A style is only offered when the context supports it (e.g. the referral style
+needs a recipient name), so there are never dangling placeholders.
+
+> **Offline & deterministic, stateless.** Subjects are generated on demand and
+> not persisted; the chosen line is used when an outreach message is drafted
+> (Module 14) and sent (Module 15). An LLM-backed generator can register later
+> without changing callers (same pattern as the resume parser).
+
+**Via the API:**
+
+- `POST /api/v1/subjects/generate` — generate ranked subject lines for a context
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -602,6 +633,7 @@ Open **http://localhost:8000/docs** in your browser.
 | `GET` | `/api/v1/profiles/{id}/cover-letters` | List a profile's cover letter drafts |
 | `GET` | `/api/v1/email-templates` | List email templates |
 | `POST` | `/api/v1/email-templates/{id}/render` | Render a template against a context |
+| `POST` | `/api/v1/subjects/generate` | Generate ranked subject lines |
 
 **Example — create a profile via curl:**
 

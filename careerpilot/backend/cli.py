@@ -33,6 +33,7 @@ from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.cover_letter import CoverLetterRequest
 from careerpilot.backend.schemas.email_template import RenderContext
 from careerpilot.backend.schemas.person import PeopleSearchQuery
+from careerpilot.backend.schemas.subject import SubjectRequest
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
@@ -45,6 +46,7 @@ from careerpilot.backend.services.email_verification import EmailVerificationSer
 from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
 from careerpilot.backend.services.resume import ResumeService
+from careerpilot.backend.services.subject import SubjectService
 from careerpilot.backend.services.templating import EmailTemplateService
 from careerpilot.backend.services.user_profile import UserProfileService
 
@@ -483,6 +485,51 @@ def generate_cover_letter(
     )
     if saved_id is not None:
         console.print(f"[green]Saved cover letter id={saved_id}[/green]")
+
+
+@app.command("generate-subjects")
+def generate_subjects(
+    profile_id: Annotated[int, typer.Option(help="Candidate profile id")],
+    company_id: Annotated[int | None, typer.Option(help="Target company id")] = None,
+    person_id: Annotated[int | None, typer.Option(help="Recipient person id")] = None,
+    job_listing_id: Annotated[
+        int | None, typer.Option(help="Target job listing id")
+    ] = None,
+    limit: Annotated[int, typer.Option(help="Max subjects")] = 5,
+) -> None:
+    """Generate ranked email subject lines for an outreach context (Module 11)."""
+    request = SubjectRequest(
+        profile_id=profile_id,
+        company_id=company_id,
+        person_id=person_id,
+        job_listing_id=job_listing_id,
+        limit=limit,
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = SubjectService(
+                UserProfileRepository(session),
+                CompanyRepository(session),
+                PersonRepository(session),
+                JobListingRepository(session),
+            )
+            result = await service.generate(request)
+            return [
+                (c.text, c.style.value, c.confidence, c.within_length)
+                for c in result.candidates
+            ]
+
+    rows = _run(_do())
+    table = Table(title="Subject line ideas")
+    table.add_column("#", justify="right")
+    table.add_column("Subject")
+    table.add_column("Style")
+    table.add_column("Score", justify="right")
+    table.add_column("Len OK")
+    for i, (text, style, conf, within) in enumerate(rows, start=1):
+        table.add_row(str(i), text, style, f"{conf:.0%}", "yes" if within else "no")
+    console.print(table)
 
 
 def _template_service(session) -> EmailTemplateService:
