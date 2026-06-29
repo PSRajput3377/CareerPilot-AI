@@ -33,6 +33,7 @@ from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.cover_letter import CoverLetterRequest
 from careerpilot.backend.schemas.email_template import RenderContext
 from careerpilot.backend.schemas.person import PeopleSearchQuery
+from careerpilot.backend.schemas.personalization import PersonalizationRequest
 from careerpilot.backend.schemas.subject import SubjectRequest
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
@@ -45,6 +46,7 @@ from careerpilot.backend.services.email_pattern import (
 from careerpilot.backend.services.email_verification import EmailVerificationService
 from careerpilot.backend.services.job_matching import JobMatchingService
 from careerpilot.backend.services.people import PeopleService
+from careerpilot.backend.services.personalization import PersonalizationService
 from careerpilot.backend.services.resume import ResumeService
 from careerpilot.backend.services.subject import SubjectService
 from careerpilot.backend.services.templating import EmailTemplateService
@@ -540,6 +542,74 @@ def _template_service(session) -> EmailTemplateService:
         PersonRepository(session),
         JobListingRepository(session),
     )
+
+
+@app.command("personalize")
+def personalize(
+    profile_id: Annotated[int, typer.Option(help="Candidate profile id")],
+    person_id: Annotated[int, typer.Option(help="Recipient person id")],
+    company_id: Annotated[int | None, typer.Option(help="Target company id")] = None,
+    job_listing_id: Annotated[
+        int | None, typer.Option(help="Target job listing id")
+    ] = None,
+    template_id: Annotated[
+        int | None, typer.Option(help="Base template to enrich")
+    ] = None,
+    tone: Annotated[
+        str, typer.Option(help="professional | enthusiastic | concise")
+    ] = "professional",
+) -> None:
+    """Compose a personalized outreach draft (Module 12).
+
+    Ties together the profile, recipient, role, skills, and an optional template
+    into one tailored email. The draft is for review — it is never sent.
+    """
+    request = PersonalizationRequest(
+        profile_id=profile_id,
+        person_id=person_id,
+        company_id=company_id,
+        job_listing_id=job_listing_id,
+        template_id=template_id,
+        tone=CoverLetterTone(tone),
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = PersonalizationService(
+                UserProfileRepository(session),
+                CompanyRepository(session),
+                PersonRepository(session),
+                JobListingRepository(session),
+                JobMatchRepository(session),
+                EmailTemplateRepository(session),
+                SubjectService(
+                    UserProfileRepository(session),
+                    CompanyRepository(session),
+                    PersonRepository(session),
+                    JobListingRepository(session),
+                ),
+                _template_service(session),
+            )
+            return await service.personalize(request)
+
+    draft = _run(_do())
+    console.print(f"[bold]Subject:[/bold] {draft.subject}")
+    console.print()
+    console.print(draft.body)
+    console.print()
+    console.print(
+        f"[dim]({draft.word_count} words, tone={draft.tone.value}, "
+        f"personalization {draft.personalization_score:.0%}, engine={draft.engine})[/dim]"
+    )
+    if draft.personalization_signals:
+        console.print(
+            f"[dim]Signals: {', '.join(draft.personalization_signals)}[/dim]"
+        )
+    if draft.missing_placeholders:
+        console.print(
+            "[yellow]Missing placeholders (left intact): "
+            f"{', '.join(draft.missing_placeholders)}[/yellow]"
+        )
 
 
 @app.command("list-templates")

@@ -58,7 +58,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 9 | Cover Letter Generator | ✅ Done |
 | 10 | Email Template Engine | ✅ Done |
 | 11 | Subject Generator | ✅ Done |
-| 12 | AI Personalization Engine | ⏳ Planned |
+| 12 | AI Personalization Engine | ✅ Done |
 | 13 | Application Tracker | ⏳ Planned |
 | 14 | Outreach Scheduler | ⏳ Planned |
 | 15 | Email Sending | ⏳ Planned |
@@ -600,6 +600,49 @@ needs a recipient name), so there are never dangling placeholders.
 
 ---
 
+### Step 8j — Compose a personalized outreach draft
+
+This is the engine that ties everything together. Given a candidate, a
+recipient, and the target company/role, it pulls the best subject line
+(Module 11), the overlapping skills from a job match (Module 8), an optional
+base template (Module 10), and the company industry into a single, tailored
+email — and reports a personalization score so a thin draft is easy to spot.
+
+```bash
+careerpilot personalize --profile-id 1 --person-id 1 --company-id 1 \
+  --job-listing-id 3 --tone enthusiastic
+careerpilot personalize --profile-id 1 --person-id 1 --template-id 1   # enrich a template
+```
+
+```
+Subject: Quick question, Maya
+
+Hi Maya!
+
+I'm Jane Engineer, reaching out about the Senior Backend Engineer at Stripe.
+My experience with Python, FastAPI, and PostgreSQL lines up closely with what
+the role calls for...
+
+(63 words, personalization 83%, engine=template)
+Signals: recipient_name, role, company, industry, matched_skills
+```
+
+If a `--template-id` is given, the engine starts from that template's body and
+appends a grounded skills line only when the template didn't already mention
+them; otherwise it composes from scratch. The recipient's company is used as the
+target by default, so `--company-id` is optional.
+
+> **Offline & deterministic, stateless.** The draft is composed with no network
+> and is **not** sent — it's the reviewable input to outreach (Module 14) and
+> sending (Module 15). An LLM engine can register later without changing callers
+> (same pattern as the resume parser).
+
+**Via the API:**
+
+- `POST /api/v1/personalize` — compose a personalized outreach draft for a context
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -634,6 +677,7 @@ Open **http://localhost:8000/docs** in your browser.
 | `GET` | `/api/v1/email-templates` | List email templates |
 | `POST` | `/api/v1/email-templates/{id}/render` | Render a template against a context |
 | `POST` | `/api/v1/subjects/generate` | Generate ranked subject lines |
+| `POST` | `/api/v1/personalize` | Compose a personalized outreach draft |
 
 **Example — create a profile via curl:**
 
