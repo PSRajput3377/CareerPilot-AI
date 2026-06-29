@@ -38,6 +38,94 @@ This contract drives the architecture: discovery → verification → drafting �
 
 ---
 
+## What, why, when, and who
+
+### What is CareerPilot AI?
+
+A command-line **and** REST-API tool that automates the repetitive parts of a
+software-engineering job search while keeping you in control of every message.
+It turns one input — **your profile + resume** — into a researched, personalized
+outreach campaign: which companies to target, who to contact there, a verified
+email for each person, a tailored message per recipient, and a tracker that
+remembers where every application stands.
+
+It is **not** a spam cannon. Nothing is sent without your review, guessed emails
+are never auto-mailed, and unverified addresses are blocked from sending.
+
+### Why use it?
+
+| The manual way (hours per company) | With CareerPilot (seconds per company) |
+| ---------------------------------- | -------------------------------------- |
+| Google the company, dig for the careers page | `discover-company` + `detect-career-page` |
+| Hunt LinkedIn for a recruiter or hiring manager | `discover-people` |
+| Guess their email, hope it's right | `guess-company-emails` → `verify-emails` |
+| Re-read the job post, tailor your pitch from scratch | `match-jobs` → `personalize` |
+| Track it all in a messy spreadsheet | `track-application` (auditable timeline) |
+
+The payoff is **volume without losing personalization** — you can run a
+thoughtful, individual outreach to dozens of companies in the time it used to
+take to do one, because the research and drafting are automated but the *voice*
+and the *send decision* stay yours.
+
+### When should you use it?
+
+- **Actively job hunting** and want to reach out to many companies efficiently.
+- **Referral / cold-outreach campaigns** where each message must feel individual.
+- **Networking** — finding the right person at a company and opening a conversation.
+- **Staying organized** across many simultaneous applications and follow-ups.
+
+It is **not** meant for: bulk unsolicited mail, scraping private data, or
+bypassing anyone's contact preferences. The whole design pushes the other way.
+
+### Where does it run?
+
+- **Locally** on macOS, Linux, or Windows (WSL) via the `careerpilot` CLI.
+- As a **REST API** (FastAPI + Swagger UI at `/docs`) you can call from scripts
+  or a future web dashboard.
+- In **Docker** for a production-like API + PostgreSQL + Redis stack.
+- Default storage is a zero-config **SQLite** file; point it at **PostgreSQL**
+  for production. Everything works **fully offline** today — no paid API keys
+  required.
+
+### Who is it for?
+
+Software engineers (and other tech-adjacent job seekers) comfortable with a
+terminal, who are running a serious search and want leverage without sacrificing
+the quality and respectfulness of each individual message.
+
+---
+
+## Command reference — what each does, and when to reach for it
+
+Every command below maps to a module in the pipeline. The CLI and the REST API
+expose the same capabilities; pick whichever fits your workflow.
+
+| Command | Module | What it does | When you use it |
+| ------- | ------ | ------------ | --------------- |
+| `init-db` | Foundation | Creates the database tables | Once, right after install |
+| `generate-encryption-key` | 20 | Prints a Fernet key for encrypting stored secrets | Once, during setup |
+| `profile create` / `list` / `show` | 1 | Manage your job-search identity (name, role, skills) | First thing; the root of everything |
+| `parse-resume` | 2 | Extracts skills/experience/education from a `.pdf`/`.txt` resume; optionally merges into a profile | After creating a profile |
+| `discover-company` | 3 | Finds companies to target and saves them | Start of each target's flow |
+| `detect-career-page` | 4 | Identifies a company's ATS (Greenhouse, Lever, …) + pulls public job listings | After discovering a company |
+| `discover-people` | 5 | Finds recruiters / hiring managers / engineers at a company | After a company is saved |
+| `guess-email` / `guess-company-emails` | 6 | Generates likely business emails when none was found (e.g. `first.last@`) | When a person has no public email |
+| `check-email` / `verify-emails` | 7 | Checks deliverability; only a valid result flips `email_verified` | Before any outreach — a hard gate |
+| `match-jobs` | 8 | Scores how well your profile fits each role (skills/title/location) | After listings are extracted; to prioritize |
+| `generate-cover-letter` | 9 | Drafts a tone-aware, grounded cover letter (saved as a draft) | When a role needs a cover letter |
+| `list-templates` / `render-template` | 10 | Reusable `{placeholder}` email templates rendered against a context | To start from a consistent base message |
+| `generate-subjects` | 11 | Produces ranked, varied subject lines (referral/personal/value/…) | When composing outreach |
+| `personalize` | 12 | Composes the full tailored email (subject + body + personalization score) | The core drafting step before sending |
+| `track-application` / `update-application` / `note-application` / `list-applications` | 13 | Tracks each application through a guarded status lifecycle with an audit timeline | From the moment you start pursuing a role |
+| `send-email` | 15 | *(Planned)* Sends the reviewed draft via Gmail/SMTP | After review — the explicit send step |
+| `follow-up` | 17 | *(Planned)* Drafts follow-ups for non-responses | A few days after outreach |
+| `dashboard` | 16 | *(Planned)* Analytics over your campaign | To measure what's working |
+
+> **The golden rule:** discovery → verification → drafting → **your review** →
+> send → track. Drafting commands never send; sending is always its own step.
+
+---
+
 ## Status
 
 Built incrementally, one module at a time, each production-quality and tested.
@@ -74,22 +162,46 @@ Built incrementally, one module at a time, each production-quality and tested.
 ## How to Use — Step by Step
 
 This guide walks you through setting up CareerPilot AI from scratch and using
-every feature that is available today: **user profiles**, **resume parsing**, and
-**company discovery**. Follow the steps in order the first time; later you can
-jump straight to the command you need.
+**every feature available today** — from creating a profile and parsing a resume,
+through company/people discovery, email guessing and verification, job matching,
+and drafting (cover letters, subject lines, fully personalized emails), all the
+way to tracking each application through its lifecycle (Modules 1–13). Follow the
+steps in order the first time; later you can jump straight to the command you need.
 
-### What you need before starting
+### Prerequisites
 
-| Requirement | Details |
-| ----------- | ------- |
-| **Python** | 3.12 or newer (tested on 3.14) |
-| **Git** | To clone the repository |
-| **Terminal** | macOS Terminal, Linux shell, or Windows WSL |
-| **Optional** | Docker Desktop — only if you want the PostgreSQL stack |
+**Required (to run anything):**
 
-You do **not** need an OpenAI key, SMTP credentials, or any paid API to try the
-current modules. Company discovery uses a built-in offline dataset; resume parsing
-uses a heuristic parser (no LLM required).
+| Requirement | Details | Why |
+| ----------- | ------- | --- |
+| **Python 3.12+** | Tested on 3.14 | Modern typing + async features the codebase uses |
+| **Git** | Any recent version | To clone the repository |
+| **Terminal** | macOS Terminal, Linux shell, or Windows WSL | The CLI is terminal-driven |
+| **~200 MB disk** | For the virtualenv + dependencies | FastAPI, SQLAlchemy, Typer, etc. |
+
+**Optional (only for specific extras):**
+
+| Requirement | Needed for | Why |
+| ----------- | ---------- | --- |
+| **Docker Desktop** | The production-like stack (Step 10) | Runs API + PostgreSQL + Redis together |
+| **PostgreSQL** | Production storage | Replaces the default SQLite file at scale |
+| **OpenAI / LLM API key** | *Future* LLM-backed generators | Optional uplift; everything falls back to offline generators today |
+| **SMTP / Gmail credentials** | *Future* email sending (Module 15) | Not required to draft or track |
+
+> **You need zero paid services to use everything available today.** Company
+> discovery uses a built-in **offline dataset**, resume parsing uses a
+> **heuristic parser**, and all AI generators (matching, cover letters,
+> subjects, personalization) run **offline and deterministically**. API keys
+> only become relevant for *future* modules and as an optional quality uplift —
+> and even then the system degrades gracefully to the offline path when no key
+> is set.
+
+> **A note on offline data.** The curated offline dataset contains a handful of
+> real companies (Stripe, Datadog, Vercel, Notion, Anthropic). Searching any
+> other name (e.g. Cisco) returns a clearly-labeled **`stub:synthesized`**
+> placeholder so you can exercise the full flow — it is *not* real data. To get
+> real companies/people/emails, register a live discovery provider; the
+> architecture supports this without changing any caller.
 
 ---
 
@@ -843,7 +955,7 @@ of git history:
 | Empty folder in Cursor/VS Code | Open the correct project folder (no trailing space in the name) |
 | `CAREERPILOT_ENCRYPTION_KEY` errors in production | Run `careerpilot generate-encryption-key` and set it in `.env` |
 | Resume parse returns little data | Try a `.txt` resume first; PDFs with scanned images need OCR (not yet supported) |
-| `send-email`, `verify-emails`, etc. say "not implemented" | Those modules are planned — see the Status table below |
+| `send-email`, `follow-up`, `dashboard` say "not implemented" | Those modules are planned — see the Status table |
 
 ---
 
@@ -855,8 +967,12 @@ These CLI commands exist as stubs but will show a "coming soon" message:
 - `follow-up` — automated follow-up drafts
 - `dashboard` — analytics
 
-The full outreach pipeline (draft → review → send → track) is being built module
-by module. Profiles, resume parsing, and company discovery are the starting point.
+Everything **up to and including drafting and application tracking** is done
+(Modules 1–13): profiles, resume parsing, company/people discovery, email
+guessing and verification, job matching, cover letters, templates, subject
+lines, full personalization, and the application tracker. The remaining work is
+the **outbound half** — actually sending (15), scheduling (14), follow-ups (17),
+and analytics (16) — being built module by module on top of the same contract.
 
 ---
 
