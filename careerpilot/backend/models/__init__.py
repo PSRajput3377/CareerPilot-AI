@@ -4,6 +4,13 @@ Importing this package ensures all models are registered on ``Base.metadata``
 (needed for ``create_all`` and Alembic autogenerate).
 """
 
+from careerpilot.backend.models.application import (
+    ALLOWED_TRANSITIONS,
+    TERMINAL_STATUSES,
+    Application,
+    ApplicationEvent,
+    ApplicationStatus,
+)
 from careerpilot.backend.models.company import (
     Company,
     FundingStage,
@@ -54,4 +61,9 @@ __all__ = [
     "CoverLetterTone",
     "EmailTemplate",
     "TemplateCategory",
+    "Application",
+    "ApplicationEvent",
+    "ApplicationStatus",
+    "ALLOWED_TRANSITIONS",
+    "TERMINAL_STATUSES",
 ]

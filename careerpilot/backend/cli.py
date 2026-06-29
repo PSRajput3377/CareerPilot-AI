@@ -17,8 +17,10 @@ from rich.table import Table
 
 from careerpilot.backend.core.security import generate_key
 from careerpilot.backend.database.session import init_models, session_scope
+from careerpilot.backend.models.application import ApplicationStatus
 from careerpilot.backend.models.cover_letter import CoverLetterTone
 from careerpilot.backend.models.person import PersonRole
+from careerpilot.backend.repositories.application import ApplicationRepository
 from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.cover_letter import CoverLetterRepository
 from careerpilot.backend.repositories.email_template import EmailTemplateRepository
@@ -29,6 +31,11 @@ from careerpilot.backend.repositories.job_listing import JobListingRepository
 from careerpilot.backend.repositories.job_match import JobMatchRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
+from careerpilot.backend.schemas.application import (
+    ApplicationCreate,
+    ApplicationNote,
+    ApplicationStatusUpdate,
+)
 from careerpilot.backend.schemas.company import CompanySearchQuery
 from careerpilot.backend.schemas.cover_letter import CoverLetterRequest
 from careerpilot.backend.schemas.email_template import RenderContext
@@ -36,6 +43,7 @@ from careerpilot.backend.schemas.person import PeopleSearchQuery
 from careerpilot.backend.schemas.personalization import PersonalizationRequest
 from careerpilot.backend.schemas.subject import SubjectRequest
 from careerpilot.backend.schemas.user_profile import UserProfileCreate, UserProfileRead
+from careerpilot.backend.services.application import ApplicationService
 from careerpilot.backend.services.career_page import CareerPageService, detection_summary
 from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.cover_letter import CoverLetterService
@@ -669,6 +677,165 @@ def render_template_cmd(
             "[yellow]Missing placeholders (left intact): "
             f"{', '.join(rendered.missing_placeholders)}[/yellow]"
         )
+
+
+# --------------------------------------------------------------------------- #
+# Application tracking commands (Module 13)
+# --------------------------------------------------------------------------- #
+
+
+def _application_service(session) -> ApplicationService:
+    return ApplicationService(
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        JobListingRepository(session),
+        ApplicationRepository(session),
+    )
+
+
+def _application_view(app_obj) -> dict:
+    """Extract a printable snapshot while the session is still open."""
+    return {
+        "id": app_obj.id,
+        "company_id": app_obj.company_id,
+        "job_listing_id": app_obj.job_listing_id,
+        "status": app_obj.status.value,
+        "events": [
+            (
+                ev.to_status.value
+                if ev.from_status is None or ev.from_status == ev.to_status
+                else f"{ev.from_status.value} → {ev.to_status.value}",
+                ev.note or "",
+            )
+            for ev in app_obj.events
+        ],
+    }
+
+
+def _print_application(view: dict) -> None:
+    """Render an application snapshot and its timeline as a table."""
+    target = f"company {view['company_id']}"
+    if view["job_listing_id"] is not None:
+        target += f" / job {view['job_listing_id']}"
+    console.print(
+        f"[bold]Application id={view['id']}[/bold] "
+        f"({target}) — status [cyan]{view['status']}[/cyan]"
+    )
+    table = Table(title="Timeline")
+    table.add_column("#", justify="right")
+    table.add_column("Change")
+    table.add_column("Note")
+    for i, (change, note) in enumerate(view["events"], start=1):
+        table.add_row(str(i), change, note)
+    console.print(table)
+
+
+@app.command("track-application")
+def track_application(
+    profile_id: Annotated[int, typer.Argument(help="Profile id")],
+    company_id: Annotated[int, typer.Argument(help="Target company id")],
+    job_listing_id: Annotated[
+        int | None, typer.Option(help="Target a specific job listing")
+    ] = None,
+    status: Annotated[
+        str, typer.Option(help="Initial status (default: saved)")
+    ] = "saved",
+    notes: Annotated[str | None, typer.Option(help="Initial note")] = None,
+) -> None:
+    """Start tracking a job application (Module 13).
+
+    Idempotent on the (profile, company, role) target — re-tracking returns the
+    existing application.
+    """
+    request = ApplicationCreate(
+        company_id=company_id,
+        job_listing_id=job_listing_id,
+        status=ApplicationStatus(status),
+        notes=notes,
+    )
+
+    async def _do():
+        async with session_scope() as session:
+            service = _application_service(session)
+            app_obj = await service.track(profile_id, request)
+            return _application_view(app_obj)
+
+    _print_application(_run(_do()))
+
+
+@app.command("list-applications")
+def list_applications(
+    profile_id: Annotated[int, typer.Argument(help="Profile id")],
+    status: Annotated[
+        str | None, typer.Option(help="Filter by status")
+    ] = None,
+    company_id: Annotated[
+        int | None, typer.Option(help="Filter by company id")
+    ] = None,
+    limit: Annotated[int, typer.Option(help="Max rows")] = 50,
+) -> None:
+    """List a profile's tracked applications (Module 13)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = _application_service(session)
+            apps = await service.list_for_profile(
+                profile_id,
+                status=ApplicationStatus(status) if status else None,
+                company_id=company_id,
+                limit=limit,
+            )
+            return [
+                (a.id, a.company_id, a.job_listing_id, a.status.value, len(a.events))
+                for a in apps
+            ]
+
+    rows = _run(_do())
+    table = Table(title="Tracked applications")
+    table.add_column("ID", justify="right")
+    table.add_column("Company", justify="right")
+    table.add_column("Job")
+    table.add_column("Status")
+    table.add_column("Events", justify="right")
+    for aid, cid, jid, st, n_events in rows:
+        table.add_row(str(aid), str(cid), str(jid) if jid else "-", st, str(n_events))
+    console.print(table)
+
+
+@app.command("update-application")
+def update_application(
+    application_id: Annotated[int, typer.Argument(help="Application id")],
+    status: Annotated[str, typer.Argument(help="New status")],
+    note: Annotated[str | None, typer.Option(help="Note for the timeline")] = None,
+) -> None:
+    """Advance a tracked application to a new status (Module 13)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = _application_service(session)
+            app_obj = await service.advance(
+                application_id,
+                ApplicationStatusUpdate(status=ApplicationStatus(status), note=note),
+            )
+            return _application_view(app_obj)
+
+    _print_application(_run(_do()))
+
+
+@app.command("note-application")
+def note_application(
+    application_id: Annotated[int, typer.Argument(help="Application id")],
+    note: Annotated[str, typer.Argument(help="Note text")],
+) -> None:
+    """Append a note to an application's timeline without changing status (Module 13)."""
+
+    async def _do():
+        async with session_scope() as session:
+            service = _application_service(session)
+            app_obj = await service.add_note(application_id, ApplicationNote(note=note))
+            return _application_view(app_obj)
+
+    _print_application(_run(_do()))
 
 
 @profile_app.command("show")

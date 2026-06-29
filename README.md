@@ -59,7 +59,7 @@ Built incrementally, one module at a time, each production-quality and tested.
 | 10 | Email Template Engine | ✅ Done |
 | 11 | Subject Generator | ✅ Done |
 | 12 | AI Personalization Engine | ✅ Done |
-| 13 | Application Tracker | ⏳ Planned |
+| 13 | Application Tracker | ✅ Done |
 | 14 | Outreach Scheduler | ⏳ Planned |
 | 15 | Email Sending | ⏳ Planned |
 | 16 | Analytics Dashboard | ⏳ Planned |
@@ -643,6 +643,62 @@ target by default, so `--company-id` is optional.
 
 ---
 
+### Step 8k — Track an application through its lifecycle
+
+Once you start pursuing a role, track it. An **application** records the target
+(your profile + a company, optionally a specific job listing), its current
+**status**, and an append-only **timeline** of every status change and note — so
+the history of an outreach is auditable and downstream modules (scheduler,
+analytics, follow-ups) have something concrete to read.
+
+**Start tracking (idempotent on the target):**
+
+```bash
+careerpilot track-application 1 1                          # profile_id  company_id
+careerpilot track-application 1 1 --job-listing-id 3 --notes "referred by Sam"
+careerpilot track-application 1 1 --status applied         # start past 'saved'
+```
+
+**Advance the status:**
+
+```bash
+careerpilot update-application 1 applied --note "submitted online"   # application_id  status
+careerpilot update-application 1 interviewing
+```
+
+Status moves through a guarded state machine:
+
+```
+saved → applied → outreach_sent → replied → interviewing → offer → accepted
+        (any non-terminal status can also go to rejected or withdrawn)
+```
+
+Illegal jumps (e.g. `saved → offer`) are refused, so the recorded history is
+always coherent. `accepted`, `rejected`, and `withdrawn` are terminal.
+
+**Append a note without changing status, and list everything:**
+
+```bash
+careerpilot note-application 1 "recruiter call scheduled for Tuesday"
+careerpilot list-applications 1                            # profile_id
+careerpilot list-applications 1 --status interviewing --company-id 1
+```
+
+> **Records, never sends.** The tracker only organizes state. A status like
+> `outreach_sent` reflects an action taken elsewhere — sending is a separate,
+> explicit step (Module 15).
+
+**Via the API:**
+
+- `POST /api/v1/profiles/{id}/applications` — start tracking (idempotent on the target)
+- `GET /api/v1/profiles/{id}/applications` — list (filter by `?status=` / `?company_id=`)
+- `GET /api/v1/applications/{application_id}` — read one with its timeline
+- `POST /api/v1/applications/{application_id}/status` — advance status (validated)
+- `POST /api/v1/applications/{application_id}/notes` — append a note
+- `DELETE /api/v1/applications/{application_id}` — stop tracking
+
+---
+
 ### Step 9 — Run the REST API (optional)
 
 The API exposes the same features as the CLI, plus an interactive Swagger UI.
@@ -678,6 +734,9 @@ Open **http://localhost:8000/docs** in your browser.
 | `POST` | `/api/v1/email-templates/{id}/render` | Render a template against a context |
 | `POST` | `/api/v1/subjects/generate` | Generate ranked subject lines |
 | `POST` | `/api/v1/personalize` | Compose a personalized outreach draft |
+| `POST` | `/api/v1/profiles/{id}/applications` | Start tracking an application |
+| `GET` | `/api/v1/profiles/{id}/applications` | List a profile's tracked applications |
+| `POST` | `/api/v1/applications/{id}/status` | Advance an application's status |
 
 **Example — create a profile via curl:**
 

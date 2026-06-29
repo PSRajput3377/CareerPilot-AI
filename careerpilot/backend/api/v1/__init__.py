@@ -7,6 +7,7 @@ one place so ``main.py`` stays stable as the platform grows.
 from fastapi import APIRouter
 
 from careerpilot.backend.api.v1 import (
+    applications,
     companies,
     cover_letters,
     email_patterns,
@@ -32,5 +33,6 @@ api_router.include_router(cover_letters.router)
 api_router.include_router(email_templates.router)
 api_router.include_router(subjects.router)
 api_router.include_router(personalization.router)
+api_router.include_router(applications.router)
 
 __all__ = ["api_router"]

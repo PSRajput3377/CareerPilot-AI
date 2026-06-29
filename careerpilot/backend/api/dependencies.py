@@ -12,6 +12,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from careerpilot.backend.database.session import get_db
+from careerpilot.backend.repositories.application import ApplicationRepository
 from careerpilot.backend.repositories.company import CompanyRepository
 from careerpilot.backend.repositories.cover_letter import CoverLetterRepository
 from careerpilot.backend.repositories.email_template import EmailTemplateRepository
@@ -22,6 +23,7 @@ from careerpilot.backend.repositories.job_listing import JobListingRepository
 from careerpilot.backend.repositories.job_match import JobMatchRepository
 from careerpilot.backend.repositories.person import PersonRepository
 from careerpilot.backend.repositories.user_profile import UserProfileRepository
+from careerpilot.backend.services.application import ApplicationService
 from careerpilot.backend.services.career_page import CareerPageService
 from careerpilot.backend.services.company import CompanyService
 from careerpilot.backend.services.cover_letter import CoverLetterService
@@ -166,4 +168,18 @@ def get_personalization_service(session: DbSession) -> PersonalizationService:
 
 PersonalizationServiceDep = Annotated[
     PersonalizationService, Depends(get_personalization_service)
+]
+
+
+def get_application_service(session: DbSession) -> ApplicationService:
+    return ApplicationService(
+        UserProfileRepository(session),
+        CompanyRepository(session),
+        JobListingRepository(session),
+        ApplicationRepository(session),
+    )
+
+
+ApplicationServiceDep = Annotated[
+    ApplicationService, Depends(get_application_service)
 ]

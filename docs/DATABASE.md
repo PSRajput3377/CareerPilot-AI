@@ -169,11 +169,38 @@ email_templates
 Four built-in templates are seeded on first use. Rendering substitutes
 placeholders from a profile/company/person/job context — it never sends.
 
+### `applications` / `application_events` (Module 13)
+
+```
+applications
+├─ id                 PK
+├─ profile_id         FK → user_profiles (cascade)
+├─ company_id         FK → companies (cascade)
+├─ job_listing_id     FK → job_listings (set null) — optional, role-specific
+├─ status             enum (saved | applied | outreach_sent | replied |
+│                            interviewing | offer | accepted | rejected |
+│                            withdrawn), indexed
+├─ notes              latest free-form note
+└─ created_at / updated_at
+   unique (profile_id, company_id, job_listing_id)
+
+application_events            append-only timeline
+├─ id                 PK
+├─ application_id     FK → applications (cascade)
+├─ from_status        enum, null on the seed event
+├─ to_status          enum, not null
+├─ note               optional
+└─ created_at / updated_at
+```
+
+Status advances through a guarded state machine (`ALLOWED_TRANSITIONS`); every
+change and note is recorded as an event. The tracker only organizes state — it
+never sends.
+
 ## Planned tables (future modules)
 
 | Module | Tables (planned) |
 | ------ | ---------------- |
-| 13 Application Tracker | `applications`, `application_events` |
 | 14/15 Outreach | `outreach_messages` (with `pending_review` state), `outreach_events` |
 
 These attach to `user_profiles` and `companies` and follow the same conventions.
